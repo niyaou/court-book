@@ -1,0 +1,80 @@
+<!--pages/orderDisplay/orderDisplay.wxml-->
+<wxs src="./orderDisplay.wxs" module="utils" />
+<view class="container">
+  <!-- 管理员类型提示 -->
+  <view class="admin-info" wx:if="{{isAdmin}}">
+    <text class="admin-text">
+      {{isSpecialManager ? '特殊管理员' : '普通管理员'}} - 查看订单列表
+    </text>
+  </view>
+  
+  <view class="order-list">
+    <block wx:for="{{orderList}}" wx:key="index">
+      <view class="order-item {{ item.status === 'PAIDED' ? 'paided' :  ''}}" bindtap="onOrderItemClick" data-order="{{item}}">
+        <view class="order-header">
+          <text class="order-time">创建时间: {{utils.formatTime(item.createTime)}}</text>
+          <text class="campus-info" wx:if="{{item.campus}}">校区: {{item.campus}}</text>
+        </view>
+        <view class="order-content">
+          <view class="order-main">
+            <view class="court-list">
+              <block wx:for="{{item.court_ids}}" wx:for-item="court" wx:key="*this">
+                <view class="court-module">
+                  <text class="court-icon">🏸</text>
+                  <text>{{court}}</text>
+                </view>
+              </block>
+            </view>
+            <view class="order-actions">
+         
+              <block wx:if="{{item.status === 'PAIDED' }}">
+                <view class="action-btn refund-btn" catchtap="onRefundClick" data-order="{{item}}" >退款</view>
+              </block>
+            </view>
+          </view>
+          <view class="order-details">
+            <text class="total-fee">总价: ￥{{item.total_fee}}</text>
+            <text class="status">状态: {{item.status === 'PENDING' ? '待支付' : item.status === 'PAIDED' ? '已支付' : item.status}}</text>
+          </view>
+        </view>
+      </view>
+    </block>
+  </view>
+  <view class="pagination">
+    <button bindtap="prevPage" disabled="{{pageNum <= 1}}">上一页</button>
+    <text>第 {{pageNum}} 页</text>
+    <button bindtap="nextPage" disabled="{{!hasMore}}">下一页</button>
+  </view>
+  <view wx:if="{{!hasMore}}" class="no-more">没有更多数据了</view>
+</view>
+
+<!-- 管理员退款密码输入模态框 -->
+<view class="modal-overlay" wx:if="{{showRefundModal}}" bindtap="onModalOverlayClick">
+  <view class="modal-content" catchtap="onModalContentClick">
+    <view class="modal-header">
+      <text class="modal-title">管理员退款</text>
+      <view class="modal-close" bindtap="onCloseModal">×</view>
+    </view>
+    <view class="modal-body">
+      <view class="input-group">
+        <text class="input-label">请输入管理员密码：</text>
+        <input 
+          class="password-input" 
+          type="password" 
+          placeholder="请输入密码" 
+          value="{{adminPassword}}"
+          bindinput="onPasswordInput"
+          focus="{{showRefundModal}}"
+        />
+      </view>
+      <view class="order-info">
+        <text class="order-info-text">订单号：{{currentOrder.outTradeNo || '未知'}}</text>
+        <text class="order-info-text">金额：￥{{currentOrder.total_fee || 0}}</text>
+      </view>
+    </view>
+    <view class="modal-footer">
+      <button class="btn-cancel" bindtap="onCloseModal">取消</button>
+      <button class="btn-confirm" bindtap="onConfirmRefund" loading="{{refunding}}">确认退款</button>
+    </view>
+  </view>
+</view> 

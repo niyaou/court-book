@@ -1,0 +1,68 @@
+var formatTime = function(dateString) {
+  var date = getDate(dateString);
+  var year = date.getFullYear();
+  var month = padStart(date.getMonth() + 1, 2, '0');
+  var day = padStart(date.getDate(), 2, '0');
+  var hours = padStart(date.getHours(), 2, '0');
+  var minutes = padStart(date.getMinutes(), 2, '0');
+  return year + '-' + month + '-' + day + ' ' + hours + ':' + minutes;
+}
+
+var padStart = function(str, targetLength, padString) {
+  str = str.toString();
+  while (str.length < targetLength) {
+    str = padString + str;
+  }
+  return str;
+}
+
+var isWithinOneDay = function(dateString) {
+  var orderDate = getDate(dateString);
+  var now = getDate();
+  var diff = now - orderDate;
+  return diff <= 1 *24 * 60 * 60 * 1000; // 24 hours in milliseconds
+}
+
+var isOrderWithinOneDay = function(court_ids) {
+           var now = getDate()
+        
+          console.log('当前时间:', now.toLocaleString());
+       
+          for(var i = 0; i < court_ids.length; i++) {
+            var courtId = court_ids[i];
+            console.log('正在检查场地ID:', courtId);
+            // 解析场地ID中的日期和时间
+            var parts = courtId.split('_')
+            var courtNumber = parts[0]
+            var date = parts[1]
+            var time = parts[2]
+            var year = date.substring(0, 4)
+            var month = date.substring(4, 6)
+            var day = date.substring(6, 8)
+            var timeParts = time.split(':')
+            var hour = timeParts[0]
+            var minute = timeParts[1]
+            
+            // 创建预订时间对象
+            var bookingTime = getDate(year, month - 1, day, hour, minute)
+            console.log('场地预订时间:', bookingTime.toLocaleString());
+            console.log('场地预订时间(ISO):', bookingTime.toISOString());
+            
+            // 如果预订时间在未来，检查是否超过24小时
+            var diffHours = (bookingTime - now) / (1000 * 60 * 60)
+            console.log('距离预订时间还有:', diffHours.toFixed(2), '小时');
+            if (diffHours <= 24) {
+                canRefund = false
+                earliestBookingTime = bookingTime
+                console.log('发现24小时内的预订，无法退款');
+                return false
+            }
+          }
+          return true
+}
+
+module.exports = {
+  formatTime: formatTime,
+  isWithinOneDay: isWithinOneDay,
+  isOrderWithinOneDay: isOrderWithinOneDay
+}; 

@@ -1,0 +1,340 @@
+/* pages/orderDisplay/orderDisplay.wxss */
+
+/* 管理员信息提示样式 */
+.admin-info {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 15px 20px;
+  margin: 10px 15px;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.admin-text {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.container {
+  padding: 20rpx;
+  padding-bottom: 120rpx;
+}
+
+.order-list {
+  margin-bottom: 20rpx;
+}
+
+.order-item {
+  background: #e2e2e2;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.pending {
+  background-color: #fff8e1;
+  border: 1px solid #ffe082;
+}
+
+.paided {
+  background-color:rgb(213 232 175)!important;
+  border: 1px solid #a5d6a7;
+}
+
+.order-header {
+  margin-bottom: 10rpx;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.order-time {
+  font-size: 24rpx;
+  color: #666;
+}
+
+.campus-info {
+  font-size: 24rpx;
+  color: #666;
+  margin-left: 20rpx;
+}
+
+.order-content {
+  margin-top: 10px;
+}
+
+.order-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.court-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 70%;
+  margin-right: 15px;
+}
+
+.court-module {
+  background: #cedfff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: #007aff;
+}
+
+.order-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+}
+
+.total-fee {
+  color: #352c2c;
+  font-weight: bold;
+}
+
+.status {
+  color: #666;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: #fff;
+  padding: 20rpx;
+  box-shadow: 0 -2rpx 10rpx rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  gap: 20rpx;
+}
+
+.pagination button {
+  background-color: #007aff;
+  color: white;
+  border: none;
+  border-radius: 8rpx;
+  padding: 8rpx 16rpx;
+  font-size: 24rpx;
+  min-width: 120rpx;
+  line-height: 1.5;
+}
+
+.pagination text {
+  font-size: 24rpx;
+  color: #333;
+  min-width: 100rpx;
+  text-align: center;
+}
+
+.pagination button:disabled {
+  background-color: #cccccc;
+}
+
+.no-more {
+  text-align: center;
+  color: #999;
+  font-size: 28rpx;
+  margin-top: 20rpx;
+  margin-bottom: 120rpx;
+}
+
+.court-icon {
+  font-size: 24rpx;
+  margin-right: 10rpx;
+}
+
+.order-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 30%;
+  align-items: flex-end;
+}
+
+.action-btn {
+  width: 80rpx;
+  min-width: 30rpx;
+  font-size: 14px;
+  padding: 4px 12px;
+  margin: 0;
+  line-height: 1.5;
+  white-space: nowrap;
+  text-align: center;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.pay-btn {
+  background-color: #07c160;
+  color: white;
+}
+
+.cancel-btn {
+  background-color: #f8f8f8;
+  color: #666;
+  border: 1px solid #ddd;
+}
+
+.refund-btn {
+  background-color: #ff4d4f;
+  color: white;
+}
+
+/* 模态框样式 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: 12px;
+  width: 80%;
+  max-width: 600rpx;
+  max-height: 80vh;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20rpx 30rpx;
+  border-bottom: 1px solid #eee;
+  background-color: #f8f9fa;
+}
+
+.modal-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.modal-close {
+  font-size: 40rpx;
+  color: #999;
+  cursor: pointer;
+  width: 40rpx;
+  height: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.modal-close:hover {
+  background-color: #f0f0f0;
+}
+
+.modal-body {
+  padding: 30rpx;
+}
+
+.input-group {
+  margin-bottom: 30rpx;
+}
+
+.input-label {
+  display: block;
+  font-size: 28rpx;
+  color: #333;
+  margin-bottom: 15rpx;
+  font-weight: 500;
+}
+
+.password-input {
+  width: 100%;
+  height: 80rpx;
+  border: 2px solid #e0e0e0;
+  border-radius: 8rpx;
+  padding: 0 20rpx;
+  font-size: 28rpx;
+  background-color: #fafafa;
+  box-sizing: border-box;
+}
+
+.password-input:focus {
+  border-color: #007aff;
+  background-color: white;
+}
+
+.order-info {
+  background-color: #f8f9fa;
+  padding: 20rpx;
+  border-radius: 8rpx;
+  margin-bottom: 20rpx;
+}
+
+.order-info-text {
+  display: block;
+  font-size: 26rpx;
+  color: #666;
+  margin-bottom: 10rpx;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 20rpx;
+  padding: 20rpx 30rpx;
+  border-top: 1px solid #eee;
+  background-color: #f8f9fa;
+}
+
+.btn-cancel, .btn-confirm {
+  flex: 1;
+  height: 80rpx;
+  border: none;
+  border-radius: 8rpx;
+  font-size: 28rpx;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-cancel {
+  background-color: #f0f0f0;
+  color: #666;
+}
+
+.btn-cancel:hover {
+  background-color: #e0e0e0;
+}
+
+.btn-confirm {
+  background-color: #007aff;
+  color: white;
+}
+
+.btn-confirm:hover {
+  background-color: #0056b3;
+}
+
+.btn-confirm:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+} 

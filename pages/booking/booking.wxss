@@ -1,0 +1,1060 @@
+.container {
+  padding: 20rpx;
+  background-color: #f5f5f5;
+}
+
+.date-selector {
+  background-color: #fff;
+  padding: 20rpx;
+  border-radius: 10rpx;
+  margin-bottom: 20rpx;
+}
+
+.picker {
+  font-size: 28rpx;
+  color: #333;
+}
+
+.court-list {
+  margin-top: 20rpx;
+}
+
+.court-item {
+  background-color: #fff;
+  border-radius: 10rpx;
+  padding: 20rpx;
+  margin-bottom: 20rpx;
+}
+
+.court-info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20rpx;
+}
+
+.court-name {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.court-type {
+  font-size: 28rpx;
+  color: #666;
+}
+
+.time-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20rpx;
+}
+
+.time-slot {
+  width: calc(33.33% - 14rpx);
+  padding: 20rpx;
+  border-radius: 8rpx;
+  text-align: center;
+  font-size: 26rpx;
+}
+
+.time-slot.available {
+  background-color: #e6f7ff;
+  color: #1296db;
+  border: 1rpx solid #1296db;
+}
+
+.time-slot.unavailable {
+  background-color: #f5f5f5;
+  color: #999;
+  border: 1rpx solid #ddd;
+}
+
+.booking-summary {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: #fff;
+  padding: 20rpx;
+  box-shadow: 0 -2rpx 10rpx rgba(0, 0, 0, 0.1);
+}
+
+.summary-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  margin-bottom: 20rpx;
+}
+
+.summary-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+  margin-bottom: 20rpx;
+}
+
+.summary-content text {
+  font-size: 28rpx;
+  color: #333;
+}
+
+.book-btn {
+  background-color: #1296db;
+  color: #fff;
+  border-radius: 8rpx;
+  font-size: 32rpx;
+  padding: 20rpx 0;
+}
+
+/* 顶部信息 */
+.booking-header {
+  background: #fff;
+  padding: 32rpx 24rpx 0 24rpx;
+}
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16rpx;
+}
+.header-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #222;
+}
+.venue-info {
+  margin-bottom: 16rpx;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.venue-left {
+  flex: 1;
+  background: #ffffff;
+  border-radius: 16rpx;
+  padding: 32rpx 24rpx;
+  margin-right: 16rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+  border: 1rpx solid #f0f0f0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-height: 60rpx;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.venue-left:active {
+  transform: scale(0.98);
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.15);
+}
+
+.venue-right {
+  flex: 1;
+  text-align: right;
+  background: #ffffff;
+  border-radius: 16rpx;
+  padding: 32rpx 24rpx;
+  margin-left: 16rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+  border: 1rpx solid #f0f0f0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-end;
+  max-height: 60rpx;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.venue-right:active {
+  transform: scale(0.98);
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.15);
+}
+
+.venue-name {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 12rpx;
+  line-height: 1.4;
+}
+
+.venue-desc {
+  font-size: 24rpx;
+  color: #666;
+  display: flex;
+  align-items: center;
+  line-height: 1.4;
+}
+
+.venue-distribution {
+  font-size: 24rpx;
+  color: #666;
+  display: flex;
+  align-items: center;
+  line-height: 1.4;
+}
+
+.icon-box-img {
+  margin-left: 8rpx;
+  color: #07c160;
+}
+
+.location-icon {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 10rpx;
+  padding: 4rpx;
+}
+
+.location-icon .iconfont {
+  font-size: 44rpx;
+  color: #333;
+}
+
+/* 日期横向滚动，固定顶部 */
+.sticky-date {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: #fff;
+}
+.date-scroll {
+  background: #fff;
+  padding: 0 0 16rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+.date-scroll-view {
+  white-space: nowrap;
+  width: 100%;
+  height: 90rpx;
+}
+.date-item {
+  display: inline-block;
+  width: 90rpx;
+  margin: 0 10rpx;
+  padding: 10rpx 0;
+  border-radius: 12rpx;
+  background: #f7f7f7;
+  text-align: center;
+  color: #222;
+}
+.date-item.selected {
+  background: #e9f56e;
+  color: #8c9a00;
+}
+.date-item .date {
+  font-size: 28rpx;
+  font-weight: bold;
+}
+.date-item .week {
+  font-size: 22rpx;
+  color: #888;
+}
+
+.footer-left {
+  padding-top: 4px;
+  padding-bottom: 4px;
+  margin-top: 0;
+  margin-bottom: 0;
+  line-height: 1.4;
+}
+.price {
+  color: #f90;
+  font-weight: bold;
+  margin: 0 8rpx;
+}
+.footer-btn {
+  background: #ededed;
+  color: #bbb;
+  font-size: 30rpx;
+  border-radius: 32rpx;
+  padding: 12rpx 48rpx;
+  border: none;
+}
+.footer-btn.active {
+  background: #d4e722;
+color: #103f6b;
+}
+
+.footer-btn.processing {
+  background: #ccc !important;
+  color: #999 !important;
+  cursor: not-allowed;
+}
+
+/* 页面整体布局 */
+.booking-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #f5f5f5;
+}
+
+.booking-header-fixed {
+  background: #fff;
+}
+
+.main-scroll {
+  flex: 1;
+  margin-top: 240rpx; /* 头部+日期栏+表头高度，需根据实际header高度调整 */
+  margin-bottom: 120rpx; /* 底部footer高度，需根据实际footer高度调整 */
+  height: auto;
+}
+
+/* 新结构冻结表格布局 */
+.booking-page-freeze {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #f5f5f5;
+  overflow: hidden;
+}
+
+.booking-header-fixed {
+  width: 100%;
+  background: #fff;
+  z-index: 20;
+}
+
+.booking-header {
+  background: #fff;
+  padding: 32rpx 24rpx 0 24rpx;
+}
+
+/* 日期横向滚动 */
+.date-scroll {
+  background: #fff;
+  padding: 0 0 16rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+/* 主体内容区 */
+.booking-table-freeze {
+  height: calc(100vh * 5/6);
+  background: #fff;
+  display: flex;
+  flex-direction: row;
+  overflow: auto;
+  position: relative;
+}
+
+/* 左侧固定列 */
+.left-fixed-column {
+  display: flex;
+  flex-direction: column;
+  height: 250%;
+  width: 200%;
+}
+
+/* 场地标题 */
+.court-header {
+  /* width:1320rpx; */
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  height: 100rpx;
+  background: #fafafa;
+  border-bottom: 1rpx solid #eee;
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+
+.corner-cell {
+  width: 120rpx !important;
+  min-width: 120rpx !important;
+  max-width: 120rpx !important;
+  height: 100rpx;
+  background: #fafafa;
+  border-right: 1rpx solid #eee;
+  border-bottom: 1rpx solid #eee;
+  position: sticky;
+  left:0;
+  top:0;
+  z-index: 3;
+  flex-shrink: 0;
+}
+
+.court-header-item {
+  width: 120rpx!important;
+
+  height: 100rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  color: #666;
+  border-right: 1rpx solid #d6d6d6;
+  background-color: #e9f56e;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+/* 时间列样式 */
+.time-column {
+  width: 120rpx !important;
+  min-width: 120rpx !important;
+  max-width: 120rpx !important;
+  background: #fafafa;
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  flex-shrink: 0;
+  border-right: 1rpx solid #d6d6d6;
+}
+
+.time-item {
+  height: 80rpx;
+  text-align: center;
+  font-size: 24rpx;
+  color: #666;
+  border-bottom: 1rpx solid #d6d6d6;
+  box-sizing: border-box;
+  padding-top: 10rpx;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  line-height: 1.2;
+}
+
+/* 场地容器 */
+.court-container {
+  flex-direction: row;
+  overflow: auto;
+  position: relative;
+  width:100%;
+}
+
+/* .court-content {
+  overflow: auto;
+} */
+
+.freeze-content-area {
+  display: flex;
+  flex-direction: row;
+  margin-top: 240rpx;
+  margin-bottom: 120rpx;
+  height: calc(100vh - 360rpx);
+}
+.freeze-corner {
+  width: 100rpx;
+  height: 60rpx;
+  background: #fafafa;
+  border-bottom: 1rpx solid #eee;
+  flex-shrink: 0;
+}
+.freeze-court-scroll {
+  flex: 1;
+  min-width: 720rpx;
+  height: 100%;
+  background: #fafafa;
+}
+.freeze-court-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  height: 60rpx;
+  background: #fafafa;
+  font-weight: bold;
+  color: #222;
+}
+.freeze-court-cell {
+  min-width: 180rpx;
+  max-width: 180rpx;
+  text-align: center;
+  padding: 16rpx 0;
+  font-size: 26rpx;
+  box-sizing: border-box;
+}
+
+.freeze-content-main-scroll {
+  height: calc(100vh - 300rpx);
+}
+.freeze-content-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  min-height: 60rpx;
+  max-height: 60rpx;
+}
+.freeze-time-cell {
+  width: 100rpx;
+  min-width: 100rpx;
+  max-width: 100rpx;
+  height: 60rpx;
+  text-align: center;
+  color: #888;
+  font-size: 26rpx;
+  line-height: 60rpx;
+  border-bottom: 1rpx solid #eee;
+  background: #fafafa;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+.freeze-content-cell {
+  min-width: 180rpx;
+  max-width: 180rpx;
+  text-align: center;
+  padding: 12rpx 0;
+  font-size: 24rpx;
+  border-bottom: 1rpx solid #eee;
+  box-sizing: border-box;
+}
+.slot-btn {
+  margin: 4rpx 0;
+  border-radius: 8rpx;
+  background: #f5f5f5;
+  color: #bbb;
+  padding: 16rpx 0;
+}
+.slot-btn.booked {
+  background: #ededed;
+  color: #aaa;
+}
+.slot-btn.available {
+  background: #e9f56e;
+  color: #8c9a00;
+}
+.booking-footer {
+  padding-left: 24rpx;
+  padding-right: 24rpx;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 -2rpx 10rpx rgba(0,0,0,0.04);
+  z-index: 30;
+}
+.footer-left {
+  font-size: 28rpx;
+  color: #222;
+}
+.price {
+  color: #f90;
+  font-weight: bold;
+  margin: 0 8rpx;
+}
+
+.table-x-scroll {
+  width: 100vw;
+  height: 100%;
+  overflow: visible;
+}
+.table-y-scroll {
+  height: calc(100vh - 300rpx);
+}
+.table-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  min-height: 60rpx;
+  max-height: 60rpx;
+}
+
+.table-cell {
+  box-sizing: border-box;
+  border-bottom: 1rpx solid #eee;
+  text-align: center;
+  font-size: 24rpx;
+  padding: 12rpx 0;
+}
+.table-corner {
+  width: 100rpx;
+  min-width: 100rpx;
+  max-width: 100rpx;
+  height: 60rpx;
+  background: #fafafa;
+  flex-shrink: 0;
+}
+.table-header-cell {
+  min-width: 180rpx;
+  max-width: 180rpx;
+  height: 60rpx;
+  font-size: 26rpx;
+  font-weight: bold;
+  background: #fafafa;
+  color: #222;
+}
+
+.slot-btn {
+  margin: 4rpx 0;
+  border-radius: 8rpx;
+  background: #f5f5f5;
+  color: #bbb;
+  padding: 16rpx 0;
+}
+.slot-btn.booked {
+  background: #ededed;
+  color: #aaa;
+}
+.slot-btn.available {
+  background: #e9f56e;
+  color: #8c9a00;
+}
+
+/* 底部栏 */
+.booking-footer-fixed {
+  height: 100rpx;
+  background: #fff;
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+}
+
+.booking-footer {
+  padding-left: 24rpx;
+  padding-right: 24rpx;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 -2rpx 10rpx rgba(0,0,0,0.04);
+}
+
+.price {
+  color: #f90;
+  font-weight: bold;
+  margin: 0 8rpx;
+}
+
+
+/* 场地容器 */
+.court-container {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  overflow: auto;
+  position: relative;
+}
+
+/* 场地内容区 */
+.court-content {
+  flex: 1;
+  overflow: auto;
+}
+
+.court-row, .court-order {
+  height: 80rpx;
+}
+.court-order {
+  width: 120rpx!important;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  border-right: 1rpx solid #d6d6d6;
+  flex-shrink: 0;
+}
+
+.court-scroll-container{
+  display: flex;
+  flex-direction: row;
+}
+
+.single-court {
+  width: 120rpx!important;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  font-size: 24rpx;
+  color: #666;
+  border-right: 1rpx solid #d6d6d6;
+}
+
+.court-status-item {
+  width: 120rpx!important;
+  height: 80rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1rpx solid #d6d6d6;
+  border-bottom: 1rpx solid #d6d6d6;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+.court-status-item.booked {
+  background:rgb(122, 29, 243);
+  color:rgb(224, 224, 224);
+}
+  /**background: #abb53e40;*/
+.court-status-item.available {
+  color: #2c2d1f;
+}
+.court-status-item.selected {
+  background: #1976d2;
+  color: #fff;
+  border-color: #1565c0;
+}
+.court-status-item.locked {
+  background: #e2c221 !important;
+  color: #61540a !important;
+} 
+.court-status-item.self-booked {
+  background-color: #326934 !important; /* Green color for self-booked slots */
+  color: white !important;
+}
+.court-status-item.manager-self-booked {
+  background-color: #326934 !important; /* Same green color as self-booked */
+  color: white !important;
+}
+.court-status-item.self-locked {
+  background: #ffe066;
+  color: #b8860b;
+}
+.court-status-item.other-locked {
+  background: #c7c7c7;
+  color: #3a3535;
+}
+
+.court-status-item.manager-locked {
+  background:rgb(131, 108, 7) !important; /* 暗色橙色背景 */
+  color: #fff3e0 !important; /* 亮色字体 */
+}
+
+.court-status-item.disabled {
+  background: #f5f5f5 !important;
+  color: #999 !important;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.court-status-item.processing {
+  opacity: 0.5;
+  pointer-events: none;
+  position: relative;
+}
+
+.court-status-item.processing::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.3);
+  z-index: 1;
+}
+
+/* 场馆分布弹窗样式 */
+.venue-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.venue-modal-content {
+  background: #fff;
+  border-radius: 20rpx;
+  width: 90%;
+  max-width: 600rpx;
+  max-height: 80%;
+  overflow: hidden;
+}
+
+.venue-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 30rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.venue-modal-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.venue-modal-close {
+  font-size: 40rpx;
+  color: #999;
+  cursor: pointer;
+  width: 60rpx;
+  height: 60rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.3s;
+}
+
+.venue-modal-close:hover {
+  background-color: #f5f5f5;
+}
+
+.venue-modal-body {
+  padding: 30rpx;
+}
+
+.venue-swiper {
+  height: 400rpx;
+}
+
+.venue-image {
+  width: 100%;
+  height: 100%;
+  border-radius: 10rpx;
+}
+
+/* 校区选择器样式 */
+.campus-selector {
+  display: flex;
+  align-items: center;
+  background-color: #f8f9fa;
+  border-radius: 20rpx;
+  padding: 12rpx 20rpx;
+  margin-left: auto;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.campus-selector:active {
+  background-color: #e9ecef;
+}
+
+.campus-name {
+  font-size: 28rpx;
+  color: #007bff;
+  font-weight: 500;
+  margin-right: 10rpx;
+}
+
+.campus-arrow {
+  font-size: 24rpx;
+  color: #6c757d;
+  transition: transform 0.3s;
+}
+
+.campus-selector:active .campus-arrow {
+  transform: rotate(180deg);
+}
+
+/* 校区选择弹窗样式 */
+.campus-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.campus-modal-content {
+  background: #fff;
+  border-radius: 20rpx;
+  width: 80%;
+  max-width: 500rpx;
+  max-height: 70%;
+  overflow: hidden;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(50rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.campus-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 30rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.campus-modal-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.campus-modal-close {
+  font-size: 40rpx;
+  color: #999;
+  cursor: pointer;
+  width: 60rpx;
+  height: 60rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.3s;
+}
+
+.campus-modal-close:hover {
+  background-color: #f5f5f5;
+}
+
+.campus-modal-body {
+  padding: 20rpx 0;
+  max-height: 400rpx;
+  overflow-y: auto;
+}
+
+.campus-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 30rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.campus-item:last-child {
+  border-bottom: none;
+}
+
+.campus-item:hover {
+  background-color: #f8f9fa;
+}
+
+.campus-item.active {
+  background-color: #e6f7ff;
+  color: #007bff;
+}
+
+.campus-item-name {
+  font-size: 30rpx;
+  color: #333;
+  flex: 1;
+}
+
+.campus-item.active .campus-item-name {
+  color: #007bff;
+  font-weight: 500;
+}
+
+.campus-item-check {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  background-color: #007bff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.campus-item-check text {
+  color: #fff;
+  font-size: 24rpx;
+  font-weight: bold;
+}
+
+/* 支付提醒弹窗样式 */
+.payment-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.payment-modal-content {
+  background: #fff;
+  border-radius: 20rpx;
+  width: 90%;
+  max-width: 600rpx;
+  overflow: hidden;
+}
+
+.payment-modal-header {
+  padding: 30rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+  text-align: center;
+}
+
+.payment-modal-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.payment-modal-body {
+  padding: 30rpx;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.payment-modal-main-text {
+  font-size: 28rpx;
+  color: #333;
+  margin-bottom: 30rpx;
+  line-height: 1.6;
+}
+
+.payment-modal-special-note {
+  margin-top: 20rpx;
+}
+
+.payment-modal-note-title {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 20rpx;
+}
+
+.payment-modal-note-item {
+  font-size: 26rpx;
+  color: #666;
+  line-height: 1.8;
+  margin-bottom: 15rpx;
+}
+
+.payment-modal-note-item:last-child {
+  margin-bottom: 0;
+}
+
+.payment-modal-footer {
+  padding: 20rpx 30rpx 30rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.payment-modal-btn {
+  width: 100%;
+  background: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 10rpx;
+  font-size: 30rpx;
+  padding: 20rpx 0;
+  line-height: 1;
+}

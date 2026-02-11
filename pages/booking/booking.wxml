@@ -1,0 +1,167 @@
+<view class="booking-page-freeze">
+  <!-- 顶部固定：预约信息+日期选择 -->
+  <view class="booking-header-fixed">
+    <view class="booking-header">
+      <view class="header-row">
+        <text class="header-title">场地预约</text>
+        <view class="campus-selector" bindtap="showCampusPicker">
+          <text class="campus-name">{{currentCampus}}</text>
+          <view class="campus-arrow">▼</view>
+        </view>
+      </view>
+      <view class="venue-info">
+        <view class="venue-left" bindtap="openLocation">
+          <view class="venue-name">乐动网球·{{currentCampus}}</view>
+          <view class="venue-desc">
+            <view class="venue-desc-text">查看球场位置</view>
+            <view class="venue-desc-icon">
+              <icon class="icon-box-img" type="search" size="20"></icon>
+            </view>
+           
+          </view>
+        </view>
+        <view class="venue-right" bindtap="showVenueDistribution">
+          <view class="venue-name">乐动网球·{{currentCampus}}</view>
+
+          <view class="venue-distribution">
+           <view class="venue-desc-text">
+            查看场馆分布
+            </view>
+            <view class="venue-desc-icon">
+            <icon class="icon-box-img" type="info" size="20"></icon>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+    <view class="date-scroll sticky-date">
+      <scroll-view scroll-x="true" class="date-scroll-view">
+        <view class="date-item {{item.selected ? 'selected' : ''}}" wx:for="{{dateList}}" wx:key="date" bindtap="onDateTabChange" data-index="{{index}}">
+          <view class="date">{{item.dateStr}}</view>
+          <view class="week">{{item.weekStr}}</view>
+        </view>
+      </scroll-view>
+    </view>
+  </view>
+
+  <!-- 主体内容区 -->
+  <view class="booking-table-freeze">
+    <!-- 左侧固定列 -->
+    <view class="left-fixed-column">
+      <view class="fixed"></view>
+      <!-- 场地标题 -->
+      <view class="court-header">
+        <view class="corner-cell"></view>
+        <view class="court-header-item" wx:for="{{courtList}}" wx:key="id">
+          {{item.courtNumber}}
+        </view>
+      </view>
+      <view class="court-scroll-container">
+        <view class="time-column">
+          <view class="time-item" wx:for="{{timeList}}" wx:key="time">
+            {{item.time}}
+          </view>
+        </view>
+        <view class="court-main">
+          <view class="court-container">
+            <view class ="single-court" wx:for="{{courtList}}" wx:key="courtNumber">
+         <view class="court-status-item {{item.selected ? 'selected' : ''}} {{(item.booked_by === phoneNumber && item.status === 'booked') ? 'self-booked' : ''}} {{item.status === 'locked' ? (item.isBookedByManager && item.booked_by !== phoneNumber ? 'manager-locked' : (item.booked_by === phoneNumber ? 'self-locked' : 'other-locked')) : (item.status === 'booked' && item.isBookedByManager && item.booked_by !== phoneNumber ? 'manager-locked' : item.status)}}"
+                    wx:for="{{courtStatus[item.courtNumber]}}"
+                    wx:key="time"
+                    data-courtnumber="{{item.courtNumber}}"
+                    data-time="{{item.time}}"
+                    data-status="{{item.status}}"
+                    data-text="{{item.text}}"
+                    bindtap="onCourtTimeTap">
+                {{item.text}}
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+
+
+
+    </view>
+  </view>
+
+  <!-- 底部合计栏 -->
+  <view class="booking-footer-fixed">
+    <view class="booking-footer">
+      <view class="footer-left">
+        <view>合计：<text class="price">￥{{totalPrice}}</text></view>
+        <view>已选:  <text> {{selectedCount}}小时 </text></view>
+      </view>
+      <view>
+        <button class="footer-btn {{selectedCount > 0 ? ' active' : ''}} {{isProcessingOrder ? ' processing' : ''}}" 
+                disabled="{{selectedCount <= 0 || isProcessingOrder}}" 
+                bindtap="{{phoneNumber ? 'onOrderSubmit' : 'onGoToLogin'}}">
+          {{isProcessingOrder ? '处理中...' : (phoneNumber ? '下单' : '登录')}}
+        </button>
+      </view>
+
+    </view>
+  </view>
+
+  <!-- 场馆分布图片轮播弹窗 -->
+  <view class="venue-modal" wx:if="{{showVenueModal}}" bindtap="hideVenueModal">
+    <view class="venue-modal-content" catchtap="stopPropagation">
+      <view class="venue-modal-header">
+        <text class="venue-modal-title">场馆分布图</text>
+        <view class="venue-modal-close" bindtap="hideVenueModal">×</view>
+      </view>
+      <view class="venue-modal-body">
+        <swiper class="venue-swiper" indicator-dots="{{true}}" autoplay="{{false}}" interval="3000" duration="500">
+          <swiper-item wx:for="{{venueImages}}" wx:key="index">
+            <image class="venue-image" src="{{item}}" mode="aspectFit" bindtap="previewImage" data-url="{{item}}"></image>
+          </swiper-item>
+        </swiper>
+      </view>
+    </view>
+  </view>
+
+  <!-- 校区选择弹窗 -->
+  <view class="campus-modal" wx:if="{{showCampusPicker}}" bindtap="hideCampusPicker">
+    <view class="campus-modal-content" catchtap="stopCampusPickerPropagation">
+      <view class="campus-modal-header">
+        <text class="campus-modal-title">选择校区</text>
+        <view class="campus-modal-close" bindtap="hideCampusPicker">×</view>
+      </view>
+      <view class="campus-modal-body">
+        <view class="campus-item {{item.name === currentCampus ? 'active' : ''}}"
+              wx:for="{{campusList}}"
+              wx:key="name"
+              bindtap="onCampusSelect"
+              data-campus="{{item.name}}">
+          <text class="campus-item-name">{{item.name}}</text>
+          <view class="campus-item-check" wx:if="{{item.name === currentCampus}}">
+            <text>✓</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 支付提醒弹窗 -->
+  <view class="payment-modal" wx:if="{{showPaymentModal}}">
+    <view class="payment-modal-content">
+      <view class="payment-modal-header">
+        <text class="payment-modal-title">请注意:24小时内开始的预订无法取消</text>
+      </view>
+      <view class="payment-modal-body">
+        <view class="payment-modal-main-text">场地已锁定，请尽快支付</view>
+        <view class="payment-modal-main-text">18点前开灯需加收20元每小时</view>
+        <view class="payment-modal-special-note">
+          <view class="payment-modal-note-title">特殊说明：</view>
+          <view class="payment-modal-note-item">1.一片场地最多服务6人。</view>
+          <view class="payment-modal-note-item">2.如举办商业活动或比赛，请联系客服。</view>
+          <view class="payment-modal-note-item">3.单次订场超过三小时请联系客服。</view>
+          <view class="payment-modal-note-item">4.违反上述规定，本俱乐部有权终止服务</view>
+        </view>
+      </view>
+      <view class="payment-modal-footer">
+        <button class="payment-modal-btn" bindtap="confirmPaymentModal">确定</button>
+      </view>
+    </view>
+  </view>
+</view>

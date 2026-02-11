@@ -1,0 +1,43 @@
+<!--pages/chargedList/chargedList.wxml-->
+<view class="container">
+  <view class="loading" wx:if="{{loading}}">
+    <text>加载中...</text>
+  </view>
+  
+  <view class="empty" wx:elif="{{empty}}">
+    <text>暂无充值记录</text>
+  </view>
+
+  <view class="charged-list" wx:else>
+    <view class="charged-item" wx:for="{{chargedList}}" wx:key="id">
+      <view class="item-header">
+        <text class="time">{{item.charged_time}}</text>
+      </view>
+      <view class="item-content">
+        <view class="content-row highlight" wx:if="{{item.charge > 0}}">
+          <text class="label">充值：</text>
+          <text class="value highlight-value">¥{{item.charge}}</text>
+        </view>
+        <view class="content-row highlight" wx:if="{{item.times > 0}}">
+          <text class="label">次卡：</text>
+          <text class="value highlight-value">{{item.times}}次</text>
+        </view>
+        <view class="content-row highlight" wx:if="{{item.annual_times > 0}}">
+          <text class="label">年卡：</text>
+          <text class="value highlight-value">{{item.annual_times}}次</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="pagination" wx:if="{{!empty && totalPages > 1}}">
+    <view class="pagination-info">
+      <text>第 {{page}} / {{totalPages}} 页，共 {{total}} 条</text>
+    </view>
+    <view class="pagination-buttons">
+      <button class="page-btn" disabled="{{page <= 1}}" bindtap="goToPrevPage">上一页</button>
+      <button class="page-btn" disabled="{{page >= totalPages}}" bindtap="goToNextPage">下一页</button>
+    </view>
+  </view>
+</view>
+

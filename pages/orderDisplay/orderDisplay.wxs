@@ -1,0 +1,31 @@
+// pages/orderDisplay/orderDisplay.wxs
+var formatTime = function(dateString) {
+  if (!dateString) return '';
+  
+  var date = getDate(dateString);
+  var year = date.getFullYear();
+  var month = date.getMonth() + 1;
+  var day = date.getDate();
+  var hours = date.getHours();
+  var minutes = date.getMinutes();
+  
+  month = month < 10 ? '0' + month : month;
+  day = day < 10 ? '0' + day : day;
+  hours = hours < 10 ? '0' + hours : hours;
+  minutes = minutes < 10 ? '0' + minutes : minutes;
+  
+  return year + '-' + month + '-' + day + ' ' + hours + ':' + minutes;
+};
+
+var isOrderWithinOneDay = function(courtIds) {
+  if (!courtIds || courtIds.length === 0) return false;
+  
+  // 这里可以根据实际业务逻辑来判断订单是否在一天内
+  // 暂时返回true，表示可以退款
+  return true;
+};
+
+module.exports = {
+  formatTime: formatTime,
+  isOrderWithinOneDay: isOrderWithinOneDay
+}; 

@@ -1,0 +1,72 @@
+<!--pages/spendList/spendList.wxml-->
+<view class="container">
+  <view class="loading" wx:if="{{loading}}">
+    <text>加载中...</text>
+  </view>
+  
+  <view class="empty" wx:elif="{{empty}}">
+    <text>暂无消费记录</text>
+  </view>
+
+  <view class="spend-list" wx:else>
+    <view class="spend-item" wx:for="{{spendList}}" wx:key="id">
+      <view class="item-header">
+        <text class="time" wx:if="{{item.course_start_time}}">{{item.course_start_time}}</text>
+        <text class="time" wx:else>无课程时间</text>
+      </view>
+      <view class="item-content">
+        <view class="content-row highlight" wx:if="{{item.charge > 0}}">
+          <text class="label">消费：</text>
+          <text class="value highlight-value">¥{{item.charge}}</text>
+        </view>
+
+        <view class="content-row highlight" wx:if="{{item.times > 0}}">
+          <text class="label">次卡：</text>
+          <text class="value highlight-value">{{item.times}}次</text>
+        </view>
+        <view class="content-row highlight" wx:if="{{item.annual_times > 0}}">
+          <text class="label">年卡：</text>
+          <text class="value highlight-value">{{item.annual_times}}次</text>
+        </view>
+        <view class="content-row" wx:if="{{item.course_type_name}}">
+          <text class="label">课程类型：</text>
+          <text class="value">{{item.course_type_name}}</text>
+        </view>
+        <view class="content-row" wx:if="{{item.court_name}}">
+          <text class="label">场地：</text>
+          <text class="value">{{item.court_name}}</text>
+        </view>
+        <view class="content-row" wx:if="{{item.coach_name}}">
+          <text class="label">教练：</text>
+          <text class="value">{{item.coach_name}}</text>
+        </view>
+      
+        <view class="content-row" wx:if="{{item.course_start_time}}">
+          <text class="label">开始时间：</text>
+          <text class="value">{{item.course_start_time}}</text>
+        </view>
+        <view class="content-row" wx:if="{{item.course_end_time}}">
+          <text class="label">结束时间：</text>
+          <text class="value">{{item.course_end_time}}</text>
+        </view>
+        <view class="content-row" wx:if="{{item.duration}}">
+          <text class="label">时长：</text>
+          <text class="value">{{item.duration}}小时</text>
+        </view>
+      
+       
+      </view>
+    </view>
+  </view>
+
+  <view class="pagination" wx:if="{{!empty && totalPages > 1}}">
+    <view class="pagination-info">
+      <text>第 {{page}} / {{totalPages}} 页，共 {{total}} 条</text>
+    </view>
+    <view class="pagination-buttons">
+      <button class="page-btn" disabled="{{page <= 1}}" bindtap="goToPrevPage">上一页</button>
+      <button class="page-btn" disabled="{{page >= totalPages}}" bindtap="goToNextPage">下一页</button>
+    </view>
+  </view>
+</view>
+

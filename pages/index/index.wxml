@@ -1,0 +1,40 @@
+<!--index.wxml-->
+<view class="container">
+  <view class="header-section">
+  <image src="cloud://cloud1-6gebob4m4ba8f3de.636c-cloud1-6gebob4m4ba8f3de-1357716382/mp_asset/微信图片_20250517203940.jpg" mode="widthFix"></image>
+   
+    <view class="main-title">订场小程序</view>
+    <view class="subtitle">已开放麓坊、桐梓林和雅居乐校区·其他校区敬请期待</view>
+  </view>
+  <view class="info-section">
+    <view class="business-hours">营业时间: 08:00-24:00</view>
+    <view class="address">成都市天府新区麓坊运动公园内</view>
+  </view>
+  <view class="quick-nav-grid">
+    <view class="nav-item" bindtap="navigateToBooking" data-campus="麓坊校区">
+      <text>麓坊订场</text>
+    </view>
+    <view class="nav-item" bindtap="navigateToBooking" data-campus="桐梓林校区">
+      <text>桐梓林订场</text>
+    </view>
+    <view class="nav-item" bindtap="navigateToBooking" data-campus="雅居乐校区">
+      <text>雅居乐订场</text>
+    </view>
+    <!-- <button class="nav-item" open-type="getPhoneNumber" bindgetphonenumber="getPhoneNumber">获取电话</button> -->
+   
+  </view>
+  <view class="news-section">
+    <view class="section-title">最新动态</view>
+    <view class="news-list">
+      <view class="news-item" wx:for="{{newsList}}" wx:key="id">
+        <text class="news-title">{{item.content}}</text>
+        <text class="news-date">{{item.date}}</text>
+      </view>
+    </view>
+  </view>
+  
+  <!-- 版本号显示 -->
+  <view class="version-info" bindtap="navigateToAbout">
+    <text class="version-text">v{{version}}</text>
+  </view>
+</view>

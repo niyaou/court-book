@@ -1,0 +1,111 @@
+/* pages/chargedList/chargedList.wxss */
+.container {
+  padding: 20rpx;
+  background-color: #f5f5f5;
+  min-height: 100vh;
+}
+
+.loading, .empty {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 100rpx 0;
+  color: #999;
+  font-size: 28rpx;
+}
+
+.charged-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.charged-item {
+  background-color: #fff;
+  border-radius: 10rpx;
+  padding: 30rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+}
+
+.item-header {
+  padding-bottom: 20rpx;
+  border-bottom: 1rpx solid #eee;
+  margin-bottom: 20rpx;
+}
+
+.time {
+  font-size: 28rpx;
+  color: #666;
+}
+
+.item-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.content-row {
+  display: flex;
+  align-items: center;
+  font-size: 28rpx;
+}
+
+.content-row.highlight {
+  background-color: #e6f7ff;
+  padding: 16rpx 20rpx;
+  border-radius: 8rpx;
+  border-left: 4rpx solid #1296db;
+}
+
+.label {
+  color: #666;
+  min-width: 120rpx;
+}
+
+.value {
+  color: #333;
+  flex: 1;
+}
+
+.highlight-value {
+  color: #1296db;
+  font-weight: bold;
+  font-size: 30rpx;
+}
+
+.pagination {
+  background-color: #fff;
+  padding: 30rpx 20rpx;
+  margin-top: 20rpx;
+  border-radius: 10rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+}
+
+.pagination-info {
+  text-align: center;
+  color: #666;
+  font-size: 26rpx;
+  margin-bottom: 20rpx;
+}
+
+.pagination-buttons {
+  display: flex;
+  justify-content: space-between;
+  gap: 20rpx;
+}
+
+.page-btn {
+  flex: 1;
+  background-color: #1296db;
+  color: #fff;
+  border: none;
+  border-radius: 8rpx;
+  padding: 20rpx 0;
+  font-size: 28rpx;
+}
+
+.page-btn[disabled] {
+  background-color: #e0e0e0;
+  color: #999;
+}
+

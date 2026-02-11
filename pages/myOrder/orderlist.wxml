@@ -1,0 +1,48 @@
+<!--pages/myOrder/orderlist.wxml-->
+<wxs src="./orderlist.wxs" module="utils" />
+<view class="container">
+  <view class="order-list">
+    <block wx:for="{{orderList}}" wx:key="index">
+      <view class="order-item {{ item.status === 'PAIDED' ? 'paided' :  ''}} {{ index === targetOrderIndex ? 'target-order' : '' }}" bindtap="onOrderItemClick" data-order="{{item}}">
+        <view class="order-header">
+          <text class="order-time">创建时间: {{utils.formatTime(item.createTime)}}</text>
+        </view>
+        <view class="order-content">
+          <view class="order-main">
+            <view class="court-list">
+              <view class="campus-info" wx:if="{{item.campus}}">
+                <text class="campus-label">校区：</text>
+                <text class="campus-name">{{item.campus}}</text>
+              </view>
+              <block wx:for="{{item.court_ids}}" wx:for-item="court" wx:key="*this">
+                <view class="court-module">
+                  <text class="court-icon">🏸</text>
+                  <text>{{court}}</text>
+                </view>
+              </block>
+            </view>
+            <view class="order-actions">
+              <block wx:if="{{item.status === 'PENDING'}}">
+                <view class="action-btn pay-btn" catchtap="onPayClick" data-order="{{item}}" wx:if="{{!isAdmin}}">付款</view>
+                <view class="action-btn cancel-btn" catchtap="onCancelClick" data-order="{{item}}">取消</view>
+              </block>
+              <block wx:elif="{{item.status === 'PAIDED' &&  utils.isOrderWithinOneDay(item.court_ids)}}">
+                <view class="action-btn refund-btn" catchtap="onRefundClick" data-order="{{item}}" wx:if="{{!isAdmin}}">退款</view>
+              </block>
+            </view>
+          </view>
+          <view class="order-details">
+            <text class="total-fee">总价: ￥{{item.total_fee}}</text>
+            <text class="status">状态: {{item.status === 'PENDING' ? '待支付' : item.status === 'PAIDED' ? '已支付' : item.status}}</text>
+          </view>
+        </view>
+      </view>
+    </block>
+  </view>
+  <view class="pagination">
+    <button bindtap="prevPage" disabled="{{pageNum <= 1}}">上一页</button>
+    <text>第 {{pageNum}} 页</text>
+    <button bindtap="nextPage" disabled="{{!hasMore}}">下一页</button>
+  </view>
+  <view wx:if="{{!hasMore}}" class="no-more">没有更多数据了</view>
+</view>

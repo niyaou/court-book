@@ -1,0 +1,209 @@
+/* pages/myOrder/orderlist.wxss */
+.container {
+  padding: 20rpx;
+  padding-bottom: 120rpx; /* 为底部固定的分页按钮留出空间 */
+}
+
+.order-list {
+  margin-bottom: 20rpx;
+}
+
+.order-item {
+  background: #e2e2e2;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.pending {
+  background-color: #fff8e1;
+  border: 1px solid #ffe082;
+}
+
+.paided {
+  background-color:rgb(213 232 175)!important;
+  border: 1px solid #a5d6a7;
+}
+
+.order-header {
+  margin-bottom: 10rpx;
+}
+
+.order-time {
+  font-size: 24rpx;
+  color: #666;
+}
+
+.order-content {
+  margin-top: 10px;
+}
+
+.order-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.court-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 70%;
+  margin-right: 15px;
+}
+
+.campus-info {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  background: #f0f8ff;
+  border-radius: 6px;
+  border-left: 3px solid #007aff;
+}
+
+.campus-label {
+  font-size: 26rpx;
+  color: #666;
+  margin-right: 8px;
+}
+
+.campus-name {
+  font-size: 28rpx;
+  color: #007aff;
+  font-weight: bold;
+}
+
+.court-module {
+  background: #cedfff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: #007aff;
+}
+
+.order-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+}
+
+.total-fee {
+  color: #352c2c;
+  font-weight: bold;
+}
+
+.status {
+  color: #666;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: #fff;
+  padding: 20rpx;
+  box-shadow: 0 -2rpx 10rpx rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  gap: 20rpx;
+}
+
+.pagination button {
+  background-color: #007aff;
+  color: white;
+  border: none;
+  border-radius: 8rpx;
+  padding: 8rpx 16rpx;
+  font-size: 24rpx;
+  min-width: 120rpx;
+  line-height: 1.5;
+}
+
+.pagination text {
+  font-size: 24rpx;
+  color: #333;
+  min-width: 100rpx;
+  text-align: center;
+}
+
+.pagination button:disabled {
+  background-color: #cccccc;
+}
+
+.no-more {
+  text-align: center;
+  color: #999;
+  font-size: 28rpx;
+  margin-top: 20rpx;
+  margin-bottom: 120rpx; /* 为底部固定的分页按钮留出空间 */
+}
+
+.court-icon {
+  font-size: 24rpx;
+  margin-right: 10rpx;
+}
+
+.order-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 30%;
+  align-items: flex-end;
+}
+
+.action-btn {
+  width: 80rpx;
+  min-width: 30rpx;
+  font-size: 14px;
+  padding: 4px 12px;
+  margin: 0;
+  line-height: 1.5;
+  white-space: nowrap;
+  text-align: center;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.pay-btn {
+  background-color: #07c160;
+  color: white;
+}
+
+.cancel-btn {
+  background-color: #f8f8f8;
+  color: #666;
+  border: 1px solid #ddd;
+}
+
+.refund-btn {
+  background-color: #ff4d4f;
+  color: white;
+}
+
+/* 目标订单高亮样式 */
+.target-order {
+  background-color: #fff3cd !important;
+  border: 2px solid #ffc107 !important;
+  box-shadow: 0 4px 8px rgba(255, 193, 7, 0.3) !important;
+  animation: highlight-pulse 2s ease-in-out;
+}
+
+@keyframes highlight-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
