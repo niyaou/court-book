@@ -65,7 +65,7 @@
         <view class="court-main">
           <view class="court-container">
             <view class ="single-court" wx:for="{{courtList}}" wx:key="courtNumber">
-         <view class="court-status-item {{item.selected ? 'selected' : ''}} {{(item.booked_by === phoneNumber && item.status === 'booked') ? 'self-booked' : ''}} {{item.status === 'locked' ? (item.isBookedByManager && item.booked_by !== phoneNumber ? 'manager-locked' : (item.booked_by === phoneNumber ? 'self-locked' : 'other-locked')) : (item.status === 'booked' && item.isBookedByManager && item.booked_by !== phoneNumber ? 'manager-locked' : item.status)}}"
+         <view class="court-status-item {{item.selected ? 'selected' : ''}} {{(item.booked_by === phoneNumber && item.status === 'booked') ? 'self-booked' : ''}} {{item.source_type === 'COURT_RUSH' ? 'rush-booked' : ''}} {{item.status === 'locked' ? (item.isBookedByManager && item.booked_by !== phoneNumber ? 'manager-locked' : (item.booked_by === phoneNumber ? 'self-locked' : 'other-locked')) : (item.status === 'booked' && item.isBookedByManager && item.booked_by !== phoneNumber ? 'manager-locked' : item.status)}}"
                     wx:for="{{courtStatus[item.courtNumber]}}"
                     wx:key="time"
                     data-courtnumber="{{item.courtNumber}}"
@@ -90,13 +90,16 @@
     <view class="booking-footer">
       <view class="footer-left">
         <view>合计：<text class="price">￥{{totalPrice}}</text></view>
-        <view>已选:  <text> {{selectedCount}}小时 </text></view>
+        <view>已选：<text> {{selectedCount}} 小时 </text></view>
       </view>
-      <view>
+      <view class="footer-actions">
         <button class="footer-btn {{selectedCount > 0 ? ' active' : ''}} {{isProcessingOrder ? ' processing' : ''}}" 
                 disabled="{{selectedCount <= 0 || isProcessingOrder}}" 
                 bindtap="{{phoneNumber ? 'onOrderSubmit' : 'onGoToLogin'}}">
           {{isProcessingOrder ? '处理中...' : (phoneNumber ? '下单' : '登录')}}
+        </button>
+        <button class="footer-btn rush-btn {{selectedCount > 0 && isRushManager ? ' active' : ''}}" wx:if="{{isRushManager}}" disabled="{{selectedCount <= 0 || isProcessingOrder}}" bindtap="onRushCreateSubmit">
+          发起畅打
         </button>
       </view>
 

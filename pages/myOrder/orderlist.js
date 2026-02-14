@@ -122,21 +122,33 @@ Page({
 
   loadOrders: function() {
     const { phoneNumber, pageNum, pageSize } = this.data;
-    wx.cloud.callFunction({
-      name: 'my_order_list',
-      data: {
-        phoneNumber:phoneNumber,
-        pageNum,
-        pageSize
-      }
-    }).then(res => {
-      const newOrders = res.result.data || [];
+    Promise.all([
+      wx.cloud.callFunction({
+        name: 'my_order_list',
+        data: { phoneNumber, pageNum, pageSize }
+      }),
+      wx.cloud.callFunction({
+        name: 'court_rush_my_order_list',
+        data: { phoneNumber, pageNum, pageSize }
+      })
+    ]).then(([normalRes, rushRes]) => {
+      const normalOrders = (normalRes.result && normalRes.result.data) || [];
+      const rushOrders = ((rushRes.result && rushRes.result.data) || []).map((o) => ({
+        ...o,
+        order_type: 'RUSH'
+      }));
+
+      const merged = [...normalOrders, ...rushOrders].sort((a, b) => {
+        const at = new Date(a.createTime || a.created_at || 0).getTime();
+        const bt = new Date(b.createTime || b.created_at || 0).getTime();
+        return bt - at;
+      });
+
       this.setData({
-        orderList: pageNum === 1 ? newOrders : [...this.data.orderList, ...newOrders],
-        hasMore: newOrders.length === pageSize,
-        lastUpdateTime: Date.now() // 更新最后更新时间
+        orderList: pageNum === 1 ? merged : [...this.data.orderList, ...merged],
+        hasMore: merged.length >= pageSize,
+        lastUpdateTime: Date.now()
       }, () => {
-        // 如果有目标场地ID，尝试定位到对应订单
         if (this.data.targetCourtId) {
           this.scrollToTargetOrder();
         }
@@ -229,6 +241,36 @@ Page({
 
   onPayClick: function(e) {
     const order = e.currentTarget.dataset.order;
+    if (order.order_type === 'RUSH') {
+      wx.showLoading({ title: '验证订单中...' });
+      wx.cloud.callFunction({
+        name: 'court_rush_pay_query',
+        data: { paymentId: order._id }
+      }).then(res => {
+        wx.hideLoading();
+        if (!res.result.success) {
+          wx.showToast({ title: '订单已过期', icon: 'none' });
+          this.onPullDownRefresh();
+          return;
+        }
+        const paymentParams = res.result.order.payment_parmas || res.result.order.payment_params;
+        wx.requestPayment({
+          ...paymentParams,
+          success: () => {
+            wx.showToast({ title: '支付成功', icon: 'success' });
+            this.onPullDownRefresh();
+          },
+          fail: () => {
+            wx.showToast({ title: '支付失败', icon: 'none' });
+          }
+        });
+      }).catch(() => {
+        wx.hideLoading();
+        wx.showToast({ title: '查询失败', icon: 'none' });
+      });
+      return;
+    }
+
     if (order.payment_parmas) {
       // 付款前先查询订单是否还存在
       wx.showLoading({ title: '验证订单中...' });
@@ -284,6 +326,13 @@ Page({
 
   onCancelClick: function(e) {
     const order = e.currentTarget.dataset.order;
+    if (order.order_type === 'RUSH') {
+      wx.showToast({
+        title: '畅打未支付订单不可在此取消',
+        icon: 'none'
+      });
+      return;
+    }
     wx.showModal({
       title: '确认取消',
       content: '确定要取消该订单吗？',
@@ -329,6 +378,37 @@ Page({
   },
   onRefundClick: function(e) {
     const order = e.currentTarget.dataset.order;
+    if (order.order_type === 'RUSH') {
+      wx.showModal({
+        title: '申请退款',
+        content: '确认发起畅打退款吗？',
+        success: (res) => {
+          if (!res.confirm) return;
+          wx.showLoading({ title: '退款申请中...' });
+          wx.cloud.callFunction({
+            name: 'court_rush_refund',
+            data: {
+              enrollment_id: order.enrollment_id,
+              phoneNumber: this.data.phoneNumber,
+              nonceStr: this.generateNonceStr()
+            }
+          }).then((r) => {
+            wx.hideLoading();
+            if (r.result && r.result.success) {
+              wx.showToast({ title: '退款申请已提交', icon: 'success' });
+            } else {
+              wx.showToast({ title: (r.result && r.result.error) || '申请失败', icon: 'none' });
+            }
+            this.onPullDownRefresh();
+          }).catch(() => {
+            wx.hideLoading();
+            wx.showToast({ title: '申请失败', icon: 'none' });
+          });
+        }
+      });
+      return;
+    }
+
     const nonceStr = this.generateNonceStr()
     wx.showModal({
       title: '申请退款',
@@ -396,22 +476,6 @@ Page({
     
     // 只刷新第一页数据，保持当前分页状态
     const { phoneNumber, pageSize } = this.data;
-    wx.cloud.callFunction({
-      name: 'my_order_list',
-      data: {
-        phoneNumber:phoneNumber,
-        pageNum: 1,
-        pageSize
-      }
-    }).then(res => {
-      const newOrders = res.result.data || [];
-      this.setData({
-        orderList: newOrders,
-        hasMore: newOrders.length === pageSize
-      });
-      console.log('自动刷新完成，更新了', newOrders.length, '条订单');
-    }).catch(err => {
-      console.error('自动刷新订单失败', err);
-    });
+    this.setData({ pageNum: 1 }, () => this.loadOrders());
   }
 })

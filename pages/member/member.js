@@ -168,6 +168,13 @@ Page({
             console.log('手机号:',  res.result.phoneInfo.phoneNumber);
             // 获取手机号成功后，查询会员信息
             this.getMemberInfo();
+            const redirect = wx.getStorageSync('postLoginRedirect');
+            if (redirect && redirect.page === 'rushDetail' && redirect.rushId) {
+              wx.removeStorageSync('postLoginRedirect');
+              wx.navigateTo({
+                url: `/pages/rushDetail/rushDetail?rushId=${redirect.rushId}`
+              });
+            }
           } else {
             wx.showToast({
               title: '获取手机号失败',

@@ -1,0 +1,15 @@
+<view class="container" wx:if="{{detail}}">
+  <view class="card">
+    <view class="title">{{detail.rush.campus}}</view>
+    <view class="line">开始 {{detail.rush.start_at}}</view>
+    <view class="line">人数 {{detail.rush.current_participants}} / {{detail.rush.max_participants}}</view>
+    <view class="line">状态 {{detail.rush.status}}</view>
+  </view>
+
+  <view class="actions">
+    <button class="btn" bindtap="enroll" wx:if="{{!detail.myEnrollment || detail.myEnrollment.status !== 'PAID'}}">报名</button>
+    <button class="btn" bindtap="continuePay" wx:if="{{detail.myPayment && detail.myPayment.status === 'PENDING'}}">继续支付</button>
+    <button class="btn warn" bindtap="refund" wx:if="{{detail.canRefund}}">取消并退款</button>
+    <button class="btn danger" bindtap="cancelRush" wx:if="{{isManager}}">整场取消</button>
+  </view>
+</view>

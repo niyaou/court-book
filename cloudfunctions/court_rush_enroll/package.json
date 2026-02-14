@@ -1,0 +1,9 @@
+{
+  "name": "court_rush_enroll",
+  "version": "1.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~3.0.1",
+    "mysql2": "^3.11.3"
+  }
+}
