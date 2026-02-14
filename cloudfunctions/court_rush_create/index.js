@@ -1,122 +1,117 @@
-const cloud = require('wx-server-sdk')
-const crypto = require('crypto')
+const cloud = require('wx-server-sdk');
+const crypto = require('crypto');
 
-cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
+cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 function generateRushId(phoneNumber, courtIds) {
-  const baseStr = `${phoneNumber || ''}${(courtIds || []).join(',')}${Date.now()}${Math.random()}`
-  return crypto.createHash('md5').update(baseStr).digest('hex').substring(0, 32)
+  const base = `${phoneNumber || ''}${(courtIds || []).join(',')}${Date.now()}${Math.random()}`;
+  return crypto.createHash('md5').update(base).digest('hex').substring(0, 32);
 }
 
 function parseCourtId(courtId) {
-  if (!courtId || typeof courtId !== 'string') return null
-  const parts = courtId.split('_')
-  if (parts.length < 3) return null
-  const [courtNumber, date, start_time] = parts
-  if (!courtNumber || !date || !start_time) return null
-  return { court_id: courtId, courtNumber, date, start_time }
+  const parts = String(courtId || '').split('_');
+  if (parts.length < 3) return null;
+  return {
+    court_id: courtId,
+    courtNumber: parts[0],
+    date: parts[1],
+    start_time: parts[2],
+  };
 }
 
 function buildDateTime(date, time) {
-  if (!date || !time) return null
-  const y = date.slice(0, 4)
-  const m = date.slice(4, 6)
-  const d = date.slice(6, 8)
-  return new Date(`${y}-${m}-${d}T${time}:00+08:00`)
+  if (!date || !time) return null;
+  const y = date.slice(0, 4);
+  const m = date.slice(4, 6);
+  const d = date.slice(6, 8);
+  return new Date(`${y}-${m}-${d}T${time}:00+08:00`);
 }
 
-function calcPrice(basePrice, courtInfos) {
-  const base = Number(basePrice)
-  if (!Number.isFinite(base)) return null
-  let countAfter1830 = 0
-  const threshold = '18:30'
-  for (const info of courtInfos) {
-    if (!info.start_time) continue
-    if (info.start_time >= threshold) countAfter1830 += 1
+function ensureContinuousSameCourt(courtInfos) {
+  if (!courtInfos.length) return false;
+  const courtNumber = courtInfos[0].courtNumber;
+  if (courtInfos.some((c) => c.courtNumber !== courtNumber)) return false;
+
+  const sorted = [...courtInfos].sort((a, b) => a.start_time.localeCompare(b.start_time));
+  for (let i = 1; i < sorted.length; i += 1) {
+    const [ph, pm] = sorted[i - 1].start_time.split(':').map(Number);
+    const [ch, cm] = sorted[i].start_time.split(':').map(Number);
+    const prevMinutes = ph * 60 + pm;
+    const curMinutes = ch * 60 + cm;
+    if (curMinutes - prevMinutes !== 30) return false;
   }
-  const totalLightFee = countAfter1830 * 10
-  const extraPerPerson = totalLightFee / 2
-  return Math.ceil(base + extraPerPerson)
+  return true;
 }
 
 exports.main = async (event) => {
-  const db = cloud.database()
-  const _ = db.command
+  const db = cloud.database();
+  const _ = db.command;
 
-  const { phoneNumber, campus, max_participants, base_price_per_person_yuan, court_ids } = event || {}
-
-  if (!phoneNumber || !campus || !max_participants || !base_price_per_person_yuan || !Array.isArray(court_ids) || court_ids.length === 0) {
-    return { success: false, error: 'INVALID_PARAMS', message: '参数缺失或不合法' }
-  }
-
-  const managerRes = await db.collection('manager').where({ phoneNumber }).get()
-  const manager = managerRes.data && managerRes.data[0]
-  if (!manager || (!manager.courtRushManager && !manager.specialManager)) {
-    return { success: false, error: 'NO_PERMISSION', message: '无畅打创建权限' }
-  }
-
-  const parsedList = []
-  for (const id of court_ids) {
-    const info = parseCourtId(id)
-    if (!info) {
-      return { success: false, error: 'INVALID_COURT_ID', message: `非法场地编号: ${id}` }
-    }
-    parsedList.push(info)
-  }
-
-  const uniqueIds = Array.from(new Set(parsedList.map(i => i.court_id)))
-
-  let earliest = null
-  let latest = null
-  for (const info of parsedList) {
-    const dt = buildDateTime(info.date, info.start_time)
-    if (!dt) continue
-    if (!earliest || dt < earliest) earliest = dt
-    if (!latest || dt > latest) latest = dt
-  }
-
-  const finalPrice = calcPrice(base_price_per_person_yuan, parsedList)
-  if (!Number.isFinite(finalPrice)) {
-    return { success: false, error: 'PRICE_CALC_FAILED', message: '价格计算失败' }
-  }
-
-  const rushId = generateRushId(phoneNumber, uniqueIds)
-
-  const existRes = await db.collection('court_order_collection').where({
+  const {
+    phoneNumber,
     campus,
-    court_id: _.in(uniqueIds)
-  }).get()
+    court_ids = [],
+    max_participants,
+    price_per_person_yuan,
+    venue_total_fee_yuan,
+  } = event || {};
 
-  const existingMap = new Map()
-  for (const doc of existRes.data || []) {
-    existingMap.set(doc.court_id, doc)
+  if (!phoneNumber || !campus || !Array.isArray(court_ids) || !court_ids.length || !max_participants || !price_per_person_yuan) {
+    return { success: false, error: 'INVALID_PARAMS', message: 'Missing required fields' };
   }
 
-  const conflictIds = []
-  for (const info of parsedList) {
-    const exist = existingMap.get(info.court_id)
-    if (exist && (exist.status === 'locked' || exist.status === 'booked')) {
-      conflictIds.push(info.court_id)
+  const managerRes = await db.collection('manager').where({ phoneNumber }).limit(1).get();
+  const manager = (managerRes.data || [])[0];
+  if (!manager || !(Number(manager.specialManager) >= 1 || Number(manager.courtRushManager) >= 1)) {
+    return { success: false, error: 'NO_PERMISSION', message: 'No permission' };
+  }
+
+  const parsedList = court_ids.map(parseCourtId).filter(Boolean);
+  if (parsedList.length !== court_ids.length) {
+    return { success: false, error: 'INVALID_COURT_ID', message: 'Invalid court id format' };
+  }
+
+  if (!ensureContinuousSameCourt(parsedList)) {
+    return { success: false, error: 'NOT_CONTINUOUS', message: 'Court slots must be same court and continuous' };
+  }
+
+  const uniqueCourtIds = Array.from(new Set(court_ids));
+  const rushId = generateRushId(phoneNumber, uniqueCourtIds);
+  const now = new Date();
+
+  const existingRes = await db.collection('court_order_collection').where({
+    campus,
+    court_id: _.in(uniqueCourtIds),
+  }).get();
+
+  const existingMap = new Map((existingRes.data || []).map((row) => [row.court_id, row]));
+  const conflictIds = [];
+  uniqueCourtIds.forEach((id) => {
+    const row = existingMap.get(id);
+    if (row && (row.status === 'locked' || row.status === 'booked')) {
+      conflictIds.push(id);
     }
-  }
-  if (conflictIds.length > 0) {
-    return { success: false, error: 'COURT_CONFLICT', message: '存在已锁定或已预订场地', conflictCourtIds: Array.from(new Set(conflictIds)) }
+  });
+
+  if (conflictIds.length) {
+    return { success: false, error: 'COURT_CONFLICT', conflictCourtIds: conflictIds };
   }
 
-  const now = new Date()
   for (const info of parsedList) {
-    const exist = existingMap.get(info.court_id)
-    if (exist) {
-      await db.collection('court_order_collection').doc(exist._id).update({
+    const existing = existingMap.get(info.court_id);
+    if (existing && existing.status === 'free') {
+      await db.collection('court_order_collection').doc(existing._id).update({
         data: {
           status: 'booked',
           booked_by: rushId,
           source_type: 'COURT_RUSH',
-          updated_at: now
-        }
-      })
-    } else {
-      const dt = buildDateTime(info.date, info.start_time)
+          updated_at: now,
+        },
+      });
+      continue;
+    }
+
+    if (!existing) {
       await db.collection('court_order_collection').add({
         data: {
           court_id: info.court_id,
@@ -126,45 +121,46 @@ exports.main = async (event) => {
           start_time: info.start_time,
           end_time: null,
           status: 'booked',
-          price: null,
           booked_by: rushId,
           source_type: 'COURT_RUSH',
           version: 1,
           created_at: now,
           updated_at: now,
-          start_at: dt
-        }
-      })
+          price: null,
+        },
+      });
     }
   }
 
+  const sortedTimes = [...parsedList].sort((a, b) => a.start_time.localeCompare(b.start_time));
+  const startAt = buildDateTime(sortedTimes[0].date, sortedTimes[0].start_time) || now;
+  const endAt = buildDateTime(sortedTimes[sortedTimes.length - 1].date, sortedTimes[sortedTimes.length - 1].start_time) || now;
+
   const rushDoc = {
     _id: rushId,
-    court_ids: uniqueIds,
+    court_ids: uniqueCourtIds,
     campus,
-    max_participants,
+    max_participants: Number(max_participants),
     current_participants: 0,
     held_participants: 0,
-    price_per_person_yuan: finalPrice,
+    price_per_person_yuan: Number(price_per_person_yuan),
+    venue_total_fee_yuan: Number(venue_total_fee_yuan || 0),
+    total_revenue_yuan: 0,
     status: 'OPEN',
     created_by: phoneNumber,
-    start_at: earliest || now,
-    end_at: latest || now,
+    start_at: startAt,
+    end_at: endAt,
+    cancel_refund_status: 'NOT_STARTED',
+    cancelled_at: null,
     created_at: db.serverDate(),
-    updated_at: db.serverDate()
-  }
+    updated_at: db.serverDate(),
+  };
 
-  try {
-    await db.collection('court_rush').add({ data: rushDoc })
-  } catch (e) {
-    return { success: false, error: 'CREATE_RUSH_FAILED', message: '创建畅打记录失败', details: e.message }
-  }
+  await db.collection('court_rush').add({ data: rushDoc });
 
   return {
     success: true,
     rushId,
-    court_ids: uniqueIds,
-    price_per_person_yuan: finalPrice
-  }
-}
-
+    court_ids: uniqueCourtIds,
+  };
+};

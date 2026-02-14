@@ -264,13 +264,22 @@
   font-weight: bold;
   margin: 0 8rpx;
 }
+.footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
 .footer-btn {
   background: #ededed;
   color: #bbb;
-  font-size: 30rpx;
-  border-radius: 32rpx;
-  padding: 12rpx 48rpx;
+  font-size: 28rpx;
+  border-radius: 28rpx;
+  width: 140rpx;
+  padding: 10rpx 0;
   border: none;
+  margin: 0;
+  line-height: 1.2;
+  text-align: center;
 }
 .footer-btn.active {
   background: #d4e722;
@@ -281,6 +290,12 @@ color: #103f6b;
   background: #ccc !important;
   color: #999 !important;
   cursor: not-allowed;
+}
+
+.rush-btn {
+  margin-top: 0;
+  background: #ebf3ff;
+  color: #1f5dbf;
 }
 
 /* 页面整体布局 */
@@ -681,6 +696,10 @@ color: #103f6b;
 .court-status-item.booked {
   background:rgb(122, 29, 243);
   color:rgb(224, 224, 224);
+}
+.court-status-item.rush-booked {
+  background: #1f8fff !important;
+  color: #f4f9ff !important;
 }
   /**background: #abb53e40;*/
 .court-status-item.available {

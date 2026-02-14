@@ -313,7 +313,7 @@ flowchart TD
 | court_rush_order_callback | 支付回调：按 outTradeNo 定位；**幂等门禁仅当 payment.status=PENDING 执行**，重复回调直接返回成功、不修改计数；条件更新：payment→PAIDED、enrollment→PAID、court_rush held-=1 paid+=1；任一步失败记录 pending_fix/对账修复 |
 | court_rush_refund | 用户取消报名：条件更新 payment→REFUNDING、enrollment→CANCEL_REQUESTED；调微信退款 |
 | court_rush_refund_callback | 退款回调：按 outTradeNo 定位；**幂等门禁仅当 payment.status=REFUNDING 执行**，重复回调直接返回成功、不修改计数；条件更新 payment→REFUNDED、enrollment→CANCELLED、court_rush paid-=1 |
-| court_rush_cleanup_expired | 清理过期占位：**条件 update** 仅当 enrollment.status=PENDING_PAYMENT 且 expires_at&lt;now 置 EXPIRED，并 court_rush held 原子 -1；由 court_rush_enroll、court_rush_list、court_rush_detail 等业务入口顺带调用，非定时 |
+| court_rush_cleanup_expired | 已废弃：不再单独调度；过期占位清理并入 `court_rush_enroll` / `court_rush_list` / `court_rush_detail` 等业务入口，`court_rush_reconcile` 兜底 |
 | court_rush_reconcile | 对账/修复：扫描 rush.held 与未过期 PENDING_PAYMENT 数、rush.paid 与 PAID 数、payment=PAIDED 但 enrollment 非 PAID、enrollment=PAID 但 payment 非 PAIDED；以 payment/enrollment 为准修正 rush 计数，保证最终一致；异常单标记人工处理 |
 | court_rush_cancel | 管理员整场取消：rush 到 CANCELLED、释放场地、批量对已支付报名发起退款并跟踪 cancel_refund_status |
 | court_rush_list / court_rush_detail | 列表与详情查询（按需） |
@@ -362,3 +362,60 @@ flowchart TD
 | 索引与唯一 | 不超卖、不重复报名、1 enrollment 1 payment | outTradeNo 唯一；enrollment_id 唯一；(court_rush_id, phoneNumber) 唯一；court_id 应用层或库层唯一 |
 | 占位与过期 | 未支付占位不永久占满名额；超时可释放；不用定时云函数 | PENDING_PAYMENT+expires_at；**业务触发**（报名/列表/详情顺带）+ **条件 update**（expires_at&lt;now 置 EXPIRED 并 held-=1）+ **对账兜底** |
 | 整场取消 | 场地释放 + 已支付批量退款可追踪 | court_rush_cancel；cancel_refund_status、cancelled_at；PARTIAL_FAILED 人工重试 |
+
+## 实现同步（2026-02-11，按当前代码）
+
+本节用于与仓库代码对齐。若与前文冲突，以本节为准。
+
+### 1. 已落地云函数（`court_rush_*` 分组）
+
+- `court_rush_create`
+- `court_rush_enroll`
+- `court_rush_pay_create`
+- `court_rush_pay_query`
+- `court_rush_order_callback`
+- `court_rush_refund`
+- `court_rush_refund_callback`
+- `court_rush_list`
+- `court_rush_detail`
+- `court_rush_my_order_list`
+- `court_rush_reconcile`
+- `court_rush_cancel`
+
+### 2. 过期清理函数调整（重要）
+
+- 原设计中的独立 `court_rush_cleanup_expired` 已取消独立调度职责。
+- 过期处理逻辑改为并入业务入口触发：在报名/列表/详情等查询链路中顺带处理过期占位。
+- 文档中凡提到“单独定时或单独依赖 cleanup 函数”的描述，统一改为“业务入口触发 + 对账兜底”。
+
+### 3. 支付时效与剔除策略（已更新）
+
+- 畅打支付单有效期：4 分钟（`timeExpire`）。
+- 未支付订单剔除窗口：5 分钟。
+- 仅对畅打订单生效，不影响原 `pay_order` 订场链路。
+
+### 4. 页面与交互同步
+
+- 新增 Tab：`pages/rush/rush`。
+- 新增详情：`pages/rushDetail/rushDetail`。
+- 订场页支持发起畅打（同一球场连续时段），并将 `source_type=COURT_RUSH` 的占用以蓝色显示。
+- 点击蓝色占用格，跳转对应畅打详情（按 `booked_by` 作为 `rushId`）。
+
+### 5. 分享与登录回跳
+
+- 畅打详情支持分享。
+- 外部用户打开分享链接未登录时，沿用现有登录流程。
+- 登录成功后按缓存路由自动回跳到原畅打详情继续报名。
+
+### 6. 订单聚合与续付
+
+- 现有“我的订单”页面已改为聚合展示：普通订场订单 + 畅打订单。
+- 畅打未支付订单支持“继续支付”（先 `court_rush_pay_query` 校验再拉起支付）。
+- 畅打已支付订单支持退款入口，退款窗口规则为“开场前 6 小时可退”。
+
+### 7. 权限与定价规则（代码口径）
+
+- 管理权限：`specialManager >= 1` 或 `courtRushManager`。
+- VIP 判断：读取外部 `prepaid_card`，余额公式 `rest_charge + annual_count*150 + times_count*150 > 0` 判定 VIP。
+- VIP 折后金额：向上取整到元。
+- 报名价格使用前端传入/活动固化的人均价，支付与回调按该金额闭环。

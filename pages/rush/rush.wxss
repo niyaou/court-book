@@ -1,0 +1,6 @@
+.container { padding: 24rpx; }
+.item { background: #fff; border-radius: 16rpx; padding: 20rpx; margin-bottom: 16rpx; }
+.weak { opacity: 0.55; }
+.title { font-weight: 600; margin-bottom: 8rpx; }
+.line { color: #666; font-size: 26rpx; margin-top: 6rpx; }
+.empty { color: #888; text-align: center; margin-top: 80rpx; }

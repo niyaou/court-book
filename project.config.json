@@ -80,5 +80,5 @@
       "phonenumber.getPhoneNumber"
     ]
   },
-  "cloudfunctionRoot": "cloudfunctions"
+  "cloudfunctionRoot": "cloudfunctions/"
 }

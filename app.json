@@ -2,6 +2,8 @@
   "pages": [
     "pages/index/index",
     "pages/booking/booking",
+    "pages/rush/rush",
+    "pages/rushDetail/rushDetail",
     "pages/member/member",
     "pages/myOrder/orderlist",
     "pages/orderDisplay/orderDisplay",
@@ -26,7 +28,11 @@
       },
       {
         "pagePath": "pages/booking/booking",
-        "text": "场地预约"
+        "text": "场地预订"
+      },
+      {
+        "pagePath": "pages/rush/rush",
+        "text": "畅打"
       },
       {
         "pagePath": "pages/member/member",

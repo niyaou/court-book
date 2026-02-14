@@ -1,0 +1,8 @@
+.container { padding: 24rpx; }
+.card { background: #fff; border-radius: 16rpx; padding: 24rpx; }
+.title { font-size: 32rpx; font-weight: 600; margin-bottom: 12rpx; }
+.line { color: #666; margin-top: 6rpx; }
+.actions { margin-top: 20rpx; display: flex; flex-direction: column; gap: 12rpx; }
+.btn { background: #0a7cff; color: #fff; }
+.warn { background: #ff9f1a; }
+.danger { background: #ff4d4f; }

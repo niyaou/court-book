@@ -24,6 +24,7 @@ Page({
     ], // 场馆分布图片数组
     currentCampus: '麓坊校区', // 当前选择的校区
     showCampusPicker: false, // 控制校区选择器显示
+    isRushManager: false,
     campusList: [
       { name: '麓坊校区', latitude: 30.461094427278926, longitude: 104.05406090412829, address: '麓坊街93号' },
       { name: '桐梓林校区', latitude: 30.61597, longitude: 104.07435, address: '桐梓林路123号' },
@@ -143,12 +144,15 @@ Page({
     console.log('----onshow---')
     // Read phone number from storage every time page is shown
     const phoneNumber = wx.getStorageSync('phoneNumber');
+    const app = getApp();
+    const managerList = app.globalData.managerList || [];
+    const specialManagerList = app.globalData.specialManagerList || [];
     this.setData({ 
-      phoneNumber: phoneNumber 
+      phoneNumber: phoneNumber,
+      isRushManager: managerList.includes(phoneNumber) || specialManagerList.includes(phoneNumber)
     });
     
     // 检查是否需要切换校区
-    const app = getApp();
     if (app.globalData.needSwitchCampus && app.globalData.selectedCampus) {
       const newCampus = app.globalData.selectedCampus;
       console.log('检测到校区切换:', this.data.currentCampus, '->', newCampus);
@@ -247,10 +251,14 @@ Page({
                 return {
                   time: found.start_time,
                   status: found.status === 'free' ? 'available' : found.status,
-                  text: found.status === 'free' ? `${found.price}` : found.status === 'locked' ? '已锁定' : '已预定',
+                  text: found.status === 'free'
+                    ? `${found.price}`
+                    : (found.source_type === 'COURT_RUSH' ? '畅打占用' : (found.status === 'locked' ? '已锁定' : '已预定')),
                   courtNumber: order.courtNumber,
                   booked_by: found.booked_by || '',
-                  isBookedByManager: isBookedByManager
+                  isBookedByManager: isBookedByManager,
+                  source_type: found.source_type || '',
+                  rush_id: found.source_type === 'COURT_RUSH' ? found.booked_by : ''
                 }
               } else {
                 return {
@@ -259,7 +267,9 @@ Page({
                   text: order.price,
                   courtNumber: order.courtNumber,
                   booked_by: '',
-                  isBookedByManager: false
+                  isBookedByManager: false,
+                  source_type: '',
+                  rush_id: ''
                 }
               }
             });
@@ -438,6 +448,12 @@ Page({
       // if (item.status === 'booked' || item.status === 'locked') return; // 已预定不可选
       if (item.status === 'booked' || item.status === 'locked') {
         this.setData({ needRefresh: true }); // Set flag before navigation
+        if (item.source_type === 'COURT_RUSH' && item.rush_id) {
+          wx.navigateTo({
+            url: `/pages/rushDetail/rushDetail?rushId=${encodeURIComponent(item.rush_id)}`
+          });
+          return;
+        }
         // 构造court_id用于定位订单
         const court_id = `${courtnumber}_${this.data.currentDate}_${time}`;
         wx.navigateTo({
@@ -549,10 +565,14 @@ Page({
                 return {
                   time: found.start_time,
                   status: found.status === 'free' ? 'available' : found.status,
-                  text: found.status === 'free' ? `${found.price}` : found.status === 'locked' ? '已锁定' : '已预定',
+                  text: found.status === 'free'
+                    ? `${found.price}`
+                    : (found.source_type === 'COURT_RUSH' ? '畅打占用' : (found.status === 'locked' ? '已锁定' : '已预定')),
                   courtNumber: order.courtNumber,
                   booked_by: found.booked_by || '',
-                  isBookedByManager: isBookedByManager
+                  isBookedByManager: isBookedByManager,
+                  source_type: found.source_type || '',
+                  rush_id: found.source_type === 'COURT_RUSH' ? found.booked_by : ''
                 }
               } else {
                 return {
@@ -561,7 +581,9 @@ Page({
                   text: order.price,
                   courtNumber: order.courtNumber,
                   booked_by: '',
-                  isBookedByManager: false
+                  isBookedByManager: false,
+                  source_type: '',
+                  rush_id: ''
                 }
               }
             });
@@ -801,6 +823,107 @@ Page({
       }
     });
   },
+  getSelectedRushSlots: function() {
+    const selected = [];
+    const courtStatus = this.data.courtStatus || {};
+    Object.keys(courtStatus).forEach(courtNumber => {
+      courtStatus[courtNumber].forEach(item => {
+        if (item.selected) {
+          selected.push({
+            courtNumber,
+            time: item.time,
+            court_id: `${courtNumber}_${this.data.currentDate}_${item.time}`
+          });
+        }
+      });
+    });
+    return selected.sort((a, b) => a.time.localeCompare(b.time));
+  },
+
+  validateRushSlots: function(slots) {
+    if (!slots.length) return { ok: false, message: '请先选择时段' };
+    const courtNumber = slots[0].courtNumber;
+    if (slots.some(s => s.courtNumber !== courtNumber)) {
+      return { ok: false, message: '发起畅打必须选择同一片球场' };
+    }
+
+    for (let i = 1; i < slots.length; i += 1) {
+      const [ph, pm] = slots[i - 1].time.split(':').map(Number);
+      const [ch, cm] = slots[i].time.split(':').map(Number);
+      const prev = ph * 60 + pm;
+      const cur = ch * 60 + cm;
+      if (cur - prev !== 30) {
+        return { ok: false, message: '发起畅打必须选择连续时段' };
+      }
+    }
+    return { ok: true };
+  },
+
+  onRushCreateSubmit: async function() {
+    if (!this.data.isRushManager) {
+      wx.showToast({ title: '无畅打权限', icon: 'none' });
+      return;
+    }
+    const slots = this.getSelectedRushSlots();
+    const check = this.validateRushSlots(slots);
+    if (!check.ok) {
+      wx.showToast({ title: check.message, icon: 'none' });
+      return;
+    }
+
+    const maxInput = await new Promise((resolve) => {
+      wx.showModal({
+        title: '输入人数上限',
+        editable: true,
+        placeholderText: '例如 8',
+        success: (res) => resolve(res)
+      });
+    });
+    if (!maxInput.confirm) return;
+
+    const priceInput = await new Promise((resolve) => {
+      wx.showModal({
+        title: '输入每人价(元)',
+        editable: true,
+        placeholderText: '例如 99',
+        success: (res) => resolve(res)
+      });
+    });
+    if (!priceInput.confirm) return;
+
+    const max_participants = Number(maxInput.content);
+    const price_per_person_yuan = Number(priceInput.content);
+    if (!max_participants || !price_per_person_yuan) {
+      wx.showToast({ title: '输入无效', icon: 'none' });
+      return;
+    }
+
+    try {
+      wx.showLoading({ title: '创建中...' });
+      const res = await wx.cloud.callFunction({
+        name: 'court_rush_create',
+        data: {
+          phoneNumber: this.data.phoneNumber,
+          campus: this.data.currentCampus,
+          court_ids: slots.map(s => s.court_id),
+          max_participants,
+          price_per_person_yuan
+        }
+      });
+      wx.hideLoading();
+      if (res.result && res.result.success) {
+        wx.showToast({ title: '畅打创建成功', icon: 'success' });
+        this.clearSelectedStatus();
+        this.initCourtStatusByCloud(this.data.currentDate);
+      } else {
+        wx.showToast({ title: (res.result && res.result.error) || '创建失败', icon: 'none' });
+      }
+    } catch (err) {
+      wx.hideLoading();
+      wx.showToast({ title: '创建失败', icon: 'none' });
+    }
+  },
+
   // 生成随机字符串
   generateNonceStr() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
