@@ -1,7 +1,9 @@
+const { pickStoredUserProfile } = require('./utils/userProfile')
 // app.js
 App({
   globalData: {
     userInfo: null,
+    userProfile: null,
     openid: null,
     managerList: [],
     specialManagerList: [],
@@ -41,6 +43,20 @@ App({
         env: 'cloud1-6gebob4m4ba8f3de',
         traceUser: true,
       })
+
+      const storedUserProfile = wx.getStorageSync('userProfile')
+      const legacyUserInfo = wx.getStorageSync('userInfo')
+      const { profile, source } = pickStoredUserProfile({
+        userProfile: storedUserProfile,
+        legacyUserInfo
+      })
+      if (profile) {
+        this.globalData.userProfile = profile
+        this.globalData.userInfo = profile
+        if (source === 'legacyUserInfo') {
+          wx.setStorageSync('userProfile', profile)
+        }
+      }
       
       // 先检查本地存储是否有openid
       const openid = wx.getStorageSync('openid')
