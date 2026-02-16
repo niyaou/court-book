@@ -25,6 +25,13 @@
   font-size: 24rpx;
 }
 
+.avatar {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  margin-right: 20rpx;
+}
+
 .info {
   flex: 1;
 }
@@ -50,6 +57,106 @@
   font-size: 28rpx;
   padding: 10rpx 30rpx;
   border-radius: 8rpx;
+}
+
+.profile-panel-mask {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32rpx;
+  z-index: 1000;
+}
+
+.profile-panel-card {
+  width: 100%;
+  max-width: 620rpx;
+  background-color: #fff;
+  border-radius: 20rpx;
+  padding: 28rpx;
+}
+
+.profile-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8rpx;
+}
+
+.profile-subtitle {
+  font-size: 24rpx;
+  color: #666;
+  margin-bottom: 20rpx;
+}
+
+.avatar-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+
+.avatar-preview-slot {
+  width: 120rpx;
+  height: 120rpx;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+
+.avatar-choose-btn {
+  flex: 1;
+  background-color: #e6f7ff;
+  color: #1296db;
+  font-size: 26rpx;
+  border-radius: 8rpx;
+  margin: 0;
+}
+
+.avatar-choose-btn::after {
+  border: none;
+}
+
+.avatar-preview {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  display: block;
+}
+
+.avatar-preview-placeholder {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  background-color: #f0f8ff;
+  color: #1296db;
+  font-size: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nickname-input {
+  border: 1rpx solid #eee;
+  border-radius: 8rpx;
+  padding: 16rpx;
+  font-size: 28rpx;
+  margin-bottom: 16rpx;
+  background: #fafbfc;
+}
+
+.complete-btn {
+  background-color: #1296db;
+  color: #fff;
+  font-size: 28rpx;
+  border-radius: 8rpx;
+}
+
+.complete-btn::after {
+  border: none;
 }
 
 .member-card {

@@ -1,3 +1,6 @@
+const app = getApp();
+const { normalizeUserProfile, pickStoredUserProfile } = require('../../utils/userProfile');
+
 Page({
   data: {
     userInfo: {
@@ -8,6 +11,17 @@ Page({
       points: 0,
       expireDate: ''
     },
+    wxUserProfile: {
+      nickName: '',
+      avatarUrl: ''
+    },
+    pendingPhoneNumber: '',
+    pendingMaskedPhoneNumber: '',
+    pendingProfile: {
+      nickName: '',
+      avatarUrl: ''
+    },
+    needsProfileCompletion: false,
     showAddCourtModal: false,
     campus: '',
     courtNumber: '',
@@ -23,41 +37,81 @@ Page({
     return phoneNumber.substr(0, 3) + '****' + phoneNumber.substr(7);
   },
 
-  onLoad: function() {
-    // 检查本地存储中是否有用户信息
-    const phoneNumber = wx.getStorageSync('phoneNumber');
-    if (phoneNumber) {
-      this.setData({ 
-        phoneNumber,
-        maskedPhoneNumber: this.maskPhoneNumber(phoneNumber)
-      });
-      this.getMemberInfo();
-    }
-  },
-  onShow: function() {
-    // Read phone number from storage every time page is shown
-    const phoneNumber = wx.getStorageSync('phoneNumber');
-    this.setData({ 
-      phoneNumber: phoneNumber,
-      maskedPhoneNumber: this.maskPhoneNumber(phoneNumber)
+  hydrateUserProfile: function() {
+    const globalProfile = app.globalData.userProfile;
+    const storedUserProfile = wx.getStorageSync('userProfile');
+    const legacyUserInfo = wx.getStorageSync('userInfo');
+    const { profile, source } = pickStoredUserProfile({
+      userProfile: globalProfile || storedUserProfile,
+      legacyUserInfo
     });
-    if (phoneNumber) {
-      this.getMemberInfo();
+
+    if (profile) {
+      if (!app.globalData.userProfile) {
+        app.globalData.userProfile = profile;
+      }
+      app.globalData.userInfo = profile;
+      if (source === 'legacyUserInfo') {
+        wx.setStorageSync('userProfile', profile);
+      }
+      this.setData({ wxUserProfile: profile });
+      return;
     }
-  },
-  getUserProfile: function() {
-    wx.getUserProfile({
-      desc: '用于完善会员资料',
-      success: (res) => {
-        const userInfo = res.userInfo;
-        // 这里可以添加注册会员的逻辑
-        this.setData({ userInfo });
-        wx.setStorageSync('userInfo', userInfo);
-      },
-      fail: (err) => {
-        console.error('获取用户信息失败', err);
+
+    this.setData({
+      wxUserProfile: {
+        nickName: '',
+        avatarUrl: ''
       }
     });
+  },
+
+  syncLoginViewState: function() {
+    const phoneNumber = wx.getStorageSync('phoneNumber');
+    const profile = normalizeUserProfile(this.data.wxUserProfile);
+
+    if (phoneNumber && profile) {
+      this.setData({
+        phoneNumber,
+        maskedPhoneNumber: this.maskPhoneNumber(phoneNumber),
+        needsProfileCompletion: false
+      });
+      this.getMemberInfo();
+      return;
+    }
+
+    if (phoneNumber && !profile) {
+      this.setData({
+        phoneNumber: '',
+        maskedPhoneNumber: '',
+        pendingPhoneNumber: phoneNumber,
+        pendingMaskedPhoneNumber: this.maskPhoneNumber(phoneNumber),
+        pendingProfile: {
+          nickName: '',
+          avatarUrl: ''
+        },
+        needsProfileCompletion: true
+      });
+      return;
+    }
+
+    this.setData({
+      phoneNumber: '',
+      maskedPhoneNumber: '',
+      pendingPhoneNumber: '',
+      pendingMaskedPhoneNumber: '',
+      needsProfileCompletion: false
+    });
+  },
+
+  onLoad: function() {
+    this.hydrateUserProfile();
+    this.syncLoginViewState();
+  },
+
+  onShow: function() {
+    this.hydrateUserProfile();
+    this.syncLoginViewState();
   },
 
   navigateToMyBookings: function() {
@@ -120,87 +174,153 @@ Page({
           wx.showToast({ title: '添加成功', icon: 'success' });
           this.setData({ showAddCourtModal: false, campus: '', courtNumber: '' });
         } else {
-          wx.showToast({ title: res.result.error || '添加失败', icon: 'none' });
+          wx.showToast({ title: (res.result && res.result.error) || '添加失败', icon: 'none' });
         }
       },
-      fail: (err) => {
+      fail: () => {
         wx.showToast({ title: '网络错误', icon: 'none' });
       }
     });
   },
-  getOpenId(){
-    wx.cloud.callFunction({
-      name:"getopenId",
-      success(res){
-        console.log(res)
-      },
-      fail(err){
-        console.log(err)
-      }
-    })
-  },
-  async getPhoneNumber(e) {
-    await this.getOpenId()
-    if (e.detail.errMsg === 'getPhoneNumber:ok') {
-      // 用户同意授权，获取加密数据和iv
-      console.log('==== e.detail=', e.detail)
-      const { encryptedData, iv,code } = e.detail;
-      // 这里可以调用云函数或后端接口解密手机号
+
+  getOpenId() {
+    return new Promise((resolve) => {
       wx.cloud.callFunction({
-        name: 'baseNumber',
-        data: {
-          encryptedData,
-          iv,
-          code
+        name: 'getopenId',
+        success(res) {
+          console.log(res);
+          resolve(res);
         },
-        success: res => {
-          console.log('resutl',res.result)
-          if (res.result && res.result.errCode===0) {
-            this.setData({
-              phoneNumber: res.result.phoneInfo.phoneNumber,
-              maskedPhoneNumber: this.maskPhoneNumber(res.result.phoneInfo.phoneNumber)
-            });
-            wx.setStorageSync('phoneNumber', res.result.phoneInfo.phoneNumber);
-            wx.showToast({
-              title: '获取手机号成功',
-              icon: 'success'
-            });
-            console.log('手机号:',  res.result.phoneInfo.phoneNumber);
-            // 获取手机号成功后，查询会员信息
-            this.getMemberInfo();
-            const redirect = wx.getStorageSync('postLoginRedirect');
-            if (redirect && redirect.page === 'rushDetail' && redirect.rushId) {
-              wx.removeStorageSync('postLoginRedirect');
-              wx.navigateTo({
-                url: `/pages/rushDetail/rushDetail?rushId=${redirect.rushId}`
-              });
-            }
-          } else {
-            wx.showToast({
-              title: '获取手机号失败',
-              icon: 'error'
-            });
-            console.error('获取手机号失败', res.result ? res.result.error : res);
-          }
-        },
-        fail: err => {
-          wx.showToast({
-            title: '云函数调用失败',
-            icon: 'error'
-          });
-          console.error('云函数调用失败', err);
+        fail(err) {
+          console.log(err);
+          resolve(null);
         }
       });
-    } else {
-      // 用户拒绝授权
+    });
+  },
+
+  async getPhoneNumber(e) {
+    if (e.detail.errMsg !== 'getPhoneNumber:ok') {
       wx.showToast({
-        title: '您拒绝了授权',
+        title: '您拒绝了手机号授权',
         icon: 'none'
       });
       console.warn('用户拒绝授权手机号');
+      return;
+    }
+
+    this.getOpenId();
+
+    const { encryptedData, iv, code } = e.detail;
+    wx.cloud.callFunction({
+      name: 'baseNumber',
+      data: {
+        encryptedData,
+        iv,
+        code
+      },
+      success: (res) => {
+        const phoneNumber = res && res.result && res.result.phoneInfo && res.result.phoneInfo.phoneNumber;
+
+        if (res.result && res.result.errCode === 0 && phoneNumber) {
+          this.setData({
+            pendingPhoneNumber: phoneNumber,
+            pendingMaskedPhoneNumber: this.maskPhoneNumber(phoneNumber),
+            pendingProfile: {
+              nickName: '',
+              avatarUrl: ''
+            },
+            needsProfileCompletion: true
+          });
+          wx.showToast({
+            title: '请继续完善头像和昵称',
+            icon: 'none'
+          });
+        } else {
+          wx.showToast({
+            title: '手机号解密失败',
+            icon: 'error'
+          });
+          console.error('获取手机号失败', res.result ? res.result.error : res);
+        }
+      },
+      fail: (err) => {
+        wx.showToast({
+          title: '登录失败，请稍后重试',
+          icon: 'error'
+        });
+        console.error('云函数调用失败', err);
+      }
+    });
+  },
+
+  onChooseAvatar: function(e) {
+    const avatarUrl = e && e.detail && e.detail.avatarUrl;
+    if (!avatarUrl) {
+      return;
+    }
+    this.setData({
+      'pendingProfile.avatarUrl': avatarUrl
+    });
+  },
+
+  onNicknameInput: function(e) {
+    const nickName = (e && e.detail && e.detail.value ? e.detail.value : '').trim();
+    this.setData({
+      'pendingProfile.nickName': nickName
+    });
+  },
+
+  noop: function() {},
+
+  confirmProfileAndLogin: function() {
+    const { pendingPhoneNumber, pendingProfile } = this.data;
+    const profile = normalizeUserProfile(pendingProfile);
+
+    if (!pendingPhoneNumber) {
+      wx.showToast({ title: '请先完成手机号授权', icon: 'none' });
+      return;
+    }
+
+    if (!profile) {
+      wx.showToast({ title: '请补充头像和昵称', icon: 'none' });
+      return;
+    }
+
+    this.setData({
+      phoneNumber: pendingPhoneNumber,
+      maskedPhoneNumber: this.maskPhoneNumber(pendingPhoneNumber),
+      wxUserProfile: profile,
+      pendingPhoneNumber: '',
+      pendingMaskedPhoneNumber: '',
+      pendingProfile: {
+        nickName: '',
+        avatarUrl: ''
+      },
+      needsProfileCompletion: false
+    });
+
+    wx.setStorageSync('phoneNumber', pendingPhoneNumber);
+    wx.setStorageSync('userProfile', profile);
+    wx.setStorageSync('userInfo', profile);
+    app.globalData.userProfile = profile;
+    app.globalData.userInfo = profile;
+
+    wx.showToast({
+      title: '登录成功',
+      icon: 'success'
+    });
+
+    this.getMemberInfo();
+    const redirect = wx.getStorageSync('postLoginRedirect');
+    if (redirect && redirect.page === 'rushDetail' && redirect.rushId) {
+      wx.removeStorageSync('postLoginRedirect');
+      wx.navigateTo({
+        url: `/pages/rushDetail/rushDetail?rushId=${redirect.rushId}`
+      });
     }
   },
-  // 查询会员信息
+
   getMemberInfo: function() {
     const { phoneNumber } = this.data;
     if (!phoneNumber) {
@@ -231,5 +351,5 @@ Page({
         console.error('查询会员信息失败:', err);
       }
     });
-  },
-}); 
+  }
+});
