@@ -1,12 +1,14 @@
 <view class="container">
   <view class="user-info">
-    <view class="avatar-placeholder">乐动网球</view>
+    <image wx:if="{{wxUserProfile.avatarUrl}}" class="avatar" src="{{wxUserProfile.avatarUrl}}" mode="aspectFill"></image>
+    <view wx:else class="avatar-placeholder">乐动网球</view>
+
     <view class="info">
-      <text class="nickname">{{phoneNumber?'微信用户':'' || '未登录'}}</text>
+      <text class="nickname">{{phoneNumber ? (wxUserProfile.nickName || '微信用户') : '未登录'}}</text>
       <text class="member-level" wx:if="{{userInfo.memberLevel}}">{{userInfo.memberLevel}}级会员</text>
     </view>
-   
-    <button class="login-btn" wx:if="{{!phoneNumber}}" open-type="getPhoneNumber" bindgetphonenumber="getPhoneNumber">登录/注册</button>
+
+    <button class="login-btn" wx:if="{{!phoneNumber && !needsProfileCompletion}}" open-type="getPhoneNumber" bindgetphonenumber="getPhoneNumber">登录/注册</button>
   </view>
 
   <view class="member-card">
@@ -21,7 +23,7 @@
       </view>
       <view class="card-item">
         <text class="label">手机号</text>
-        <text class="value">{{maskedPhoneNumber || '未绑定'}}</text>
+        <text class="value">{{maskedPhoneNumber || pendingMaskedPhoneNumber || '未绑定'}}</text>
       </view>
       <view class="card-item" wx:if="{{memberInfo.court}}">
         <text class="label">所属场地</text>
@@ -29,7 +31,7 @@
       </view>
       <view class="card-item" wx:if="{{memberInfo.rest_charge !== undefined}}">
         <text class="label">余额</text>
-        <text class="value">¥{{memberInfo.rest_charge}}</text>
+        <text class="value">￥{{memberInfo.rest_charge}}</text>
       </view>
       <view class="card-item" wx:if="{{memberInfo.times_count !== undefined}}">
         <text class="label">次卡次数</text>
@@ -43,7 +45,7 @@
     <view class="card-content" wx:else>
       <view class="card-item">
         <text class="label">会员卡号</text>
-        <text class="value">{{maskedPhoneNumber || '未绑定'}}</text>
+        <text class="value">{{maskedPhoneNumber || pendingMaskedPhoneNumber || '未绑定'}}</text>
       </view>
       <view class="card-item">
         <text class="label">会员信息</text>
@@ -65,16 +67,6 @@
       <text>消费记录</text>
       <text class="arrow">></text>
     </view>
-    <!-- <view class="menu-item" bindtap="navigateToPoints">
-      <text>积分记录</text>
-    </view>
-    <view class="menu-item" bindtap="navigateToSettings">
-      <text>设置</text>
-    </view>
-    <view class="menu-item">
-      <button bindtap="showAddCourtModal">添加场地</button>
-    </view>
-     -->
   </view>
 
   <modal
@@ -85,10 +77,28 @@
     show-cancel="true"
     confirm-text="提交"
     cancel-text="取消"
-    >
+  >
     <view class="modal-content">
       <input placeholder="请输入校区" value="{{campus}}" bindinput="onCampusInput" />
       <input placeholder="请输入场地编号" value="{{courtNumber}}" bindinput="onCourtNumberInput" type="number" />
     </view>
   </modal>
-</view> 
+
+  <view class="profile-panel-mask" wx:if="{{needsProfileCompletion}}">
+    <view class="profile-panel-card" catchtap="noop">
+      <view class="profile-title">完成资料后即可登录</view>
+      <view class="profile-subtitle">{{pendingMaskedPhoneNumber || '已获取手机号'}}</view>
+      <view class="avatar-row">
+        <view class="avatar-preview-slot">
+          <image wx:if="{{pendingProfile.avatarUrl}}" class="avatar-preview" src="{{pendingProfile.avatarUrl}}" mode="aspectFill"></image>
+          <view wx:else class="avatar-preview-placeholder">头像</view>
+        </view>
+        <button class="avatar-choose-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+          {{pendingProfile.avatarUrl ? '点击可更换头像' : '选择头像'}}
+        </button>
+      </view>
+      <input class="nickname-input" type="nickname" placeholder="请输入昵称" value="{{pendingProfile.nickName}}" bindinput="onNicknameInput" />
+      <button class="complete-btn" bindtap="confirmProfileAndLogin">完成登录</button>
+    </view>
+  </view>
+</view>
