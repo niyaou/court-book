@@ -55,6 +55,42 @@ async function decrementHeld(db, rushId) {
   });
 }
 
+async function cleanupExpiredEnrollments(db, rushId) {
+  const now = new Date();
+  const where = {
+    status: 'PENDING_PAYMENT',
+    expires_at: db.command.lt(now),
+  };
+  if (rushId) where.court_rush_id = rushId;
+
+  const expiredRes = await db.collection('court_rush_enrollment').where(where).get();
+  const expiredRows = expiredRes.data || [];
+
+  for (const row of expiredRows) {
+    const up = await db.collection('court_rush_enrollment').where({
+      _id: row._id,
+      status: 'PENDING_PAYMENT',
+    }).update({
+      data: {
+        status: 'EXPIRED',
+        updated_at: db.serverDate(),
+      },
+    });
+
+    if (up.stats && up.stats.updated === 1 && row.court_rush_id) {
+      await db.collection('court_rush').where({
+        _id: row.court_rush_id,
+        held_participants: db.command.gt(0),
+      }).update({
+        data: {
+          held_participants: db.command.inc(-1),
+          updated_at: db.serverDate(),
+        },
+      });
+    }
+  }
+}
+
 exports.main = async (event) => {
   const db = cloud.database();
   const _ = db.command;
@@ -63,10 +99,22 @@ exports.main = async (event) => {
   const openid = event.openid;
   const nonceStr = event.nonceStr;
   const court_rush_id = event.court_rush_id || event.rushId;
+  const nickName = event.nickName;
+  const avatarUrl = event.avatarUrl;
 
   if (!phoneNumber || !openid || !court_rush_id) {
     return { success: false, error: 'INVALID_PARAMS', message: 'Missing required fields' };
   }
+
+  if (!nickName || typeof nickName !== 'string' || !nickName.trim()) {
+    return { success: false, error: 'INVALID_PARAMS', message: 'nickName is required' };
+  }
+
+  if (!avatarUrl || typeof avatarUrl !== 'string' || !avatarUrl.trim()) {
+    return { success: false, error: 'INVALID_PARAMS', message: 'avatarUrl is required' };
+  }
+
+  await cleanupExpiredEnrollments(db, court_rush_id);
 
   const rushRes = await db.collection('court_rush').doc(court_rush_id).get();
   const rush = rushRes.data;
@@ -139,6 +187,8 @@ exports.main = async (event) => {
           is_vip: vipInfo.isVip,
           actual_fee_yuan: actualFee,
           expires_at: expiresAt,
+          nickName: nickName.trim(),
+          avatarUrl: avatarUrl.trim(),
           updated_at: db.serverDate(),
         },
       });
@@ -151,6 +201,8 @@ exports.main = async (event) => {
           is_vip: vipInfo.isVip,
           actual_fee_yuan: actualFee,
           expires_at: expiresAt,
+          nickName: nickName.trim(),
+          avatarUrl: avatarUrl.trim(),
           created_at: db.serverDate(),
           updated_at: db.serverDate(),
         },

@@ -1,4 +1,4 @@
-<!--pages/myOrder/orderlist.wxml-->
+﻿<!--pages/myOrder/orderlist.wxml-->
 <wxs src="./orderlist.wxs" module="utils" />
 <view class="container">
   <view class="order-list">
@@ -33,7 +33,7 @@
             </view>
           </view>
           <view class="order-details">
-            <text class="total-fee">总价: ￥{{item.total_fee}}</text>
+            <text class="total-fee">总价: ¥{{item.total_fee}}</text>
             <text class="status">状态: {{item.status === 'PENDING' ? '待支付' : item.status === 'PAIDED' ? '已支付' : item.status}}</text>
           </view>
         </view>

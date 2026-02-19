@@ -1,3 +1,6 @@
+const { isTempAvatarPath, uploadAvatarToCloud } = require('../../utils/userProfile.js');
+const DEFAULT_AVATAR_URL = 'cloud://cloud1-6gebob4m4ba8f3de.636c-cloud1-6gebob4m4ba8f3de-1357716382/mp_asset/default_avatar.png';
+
 function genNonce() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let s = '';
@@ -22,9 +25,8 @@ Page({
   onShow() {
     const phoneNumber = wx.getStorageSync('phoneNumber') || '';
     const app = getApp();
-    const managerList = app.globalData.managerList || [];
-    const specialManagerList = app.globalData.specialManagerList || [];
-    const isManager = managerList.includes(phoneNumber) || specialManagerList.includes(phoneNumber);
+    const courtRushManagerList = app.globalData.courtRushManagerList || [];
+    const isManager = courtRushManagerList.includes(phoneNumber);
     this.setData({ phoneNumber, isManager });
 
     if (!phoneNumber) {
@@ -60,6 +62,27 @@ Page({
 
   async enroll() {
     const openid = wx.getStorageSync('openid');
+    const app = getApp();
+    const userProfile = wx.getStorageSync('userProfile') || app.globalData.userProfile || {};
+    let nickName = (userProfile.nickName && userProfile.nickName.trim()) || '微信用户';
+    let avatarUrl = (userProfile.avatarUrl && userProfile.avatarUrl.trim()) || DEFAULT_AVATAR_URL;
+    if (isTempAvatarPath(avatarUrl)) {
+      console.log('avatar upload start (rushDetail)', avatarUrl);
+      try {
+        wx.showLoading({ title: '上传头像...' });
+        avatarUrl = await uploadAvatarToCloud(avatarUrl, this.data.phoneNumber || '');
+        console.log('avatar upload success (rushDetail)', avatarUrl);
+        wx.hideLoading();
+        const updated = { nickName, avatarUrl };
+        wx.setStorageSync('userProfile', updated);
+        if (app.globalData.userProfile) app.globalData.userProfile = updated;
+      } catch (e) {
+        console.log('avatar upload fail (rushDetail)', e);
+        wx.hideLoading();
+        wx.showToast({ title: '头像上传失败', icon: 'none' });
+        return;
+      }
+    }
     try {
       const res = await wx.cloud.callFunction({
         name: 'court_rush_enroll',
@@ -68,6 +91,8 @@ Page({
           phoneNumber: this.data.phoneNumber,
           openid,
           nonceStr: genNonce(),
+          nickName,
+          avatarUrl,
         }
       });
       const result = res.result || {};

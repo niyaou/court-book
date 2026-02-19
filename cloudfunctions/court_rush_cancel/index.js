@@ -2,6 +2,13 @@ const cloud = require('wx-server-sdk');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
+function isAdminManager(manager) {
+  if (!manager || typeof manager !== 'object') return false;
+  const courtRushManager = Number(manager.courtRushManager || 0);
+  const specialManager = Number(manager.specialManager || 0);
+  return courtRushManager >= 1 || specialManager >= 1;
+}
+
 function generateNonce() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let result = '';
@@ -18,7 +25,7 @@ exports.main = async (event) => {
 
   const managerRes = await db.collection('manager').where({ phoneNumber: operatorPhone }).limit(1).get();
   const manager = (managerRes.data || [])[0];
-  if (!manager || !(Number(manager.specialManager) >= 1 || Number(manager.courtRushManager) >= 1)) {
+  if (!isAdminManager(manager)) {
     return { success: false, error: 'NO_PERMISSION' };
   }
 
@@ -36,8 +43,8 @@ exports.main = async (event) => {
   });
 
   await db.collection('court_order_collection').where({
-    booked_by: rushId,
     source_type: 'COURT_RUSH',
+    rush_id: rushId,
   }).remove();
 
   const enrollRes = await db.collection('court_rush_enrollment').where({ court_rush_id: rushId, status: 'PAID' }).get();

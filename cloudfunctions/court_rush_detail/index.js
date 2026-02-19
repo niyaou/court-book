@@ -64,6 +64,19 @@ exports.main = async (event) => {
 
   const canRefund = myEnrollment && myEnrollment.status === 'PAID' && (new Date(rush.start_at) - new Date()) / (1000 * 60 * 60) >= 6;
 
+  const participantsRes = await db.collection('court_rush_enrollment').where({
+    court_rush_id: rushId,
+    status: db.command.in(['PENDING_PAYMENT', 'PAID']),
+  }).get();
+
+  const participants = (participantsRes.data || []).map((enroll) => ({
+    nickName: enroll.nickName || '微信用户',
+    avatarUrl: enroll.avatarUrl || '',
+  }));
+
+  const current = Number(rush.current_participants || 0);
+  const held = Number(rush.held_participants || 0);
+
   return {
     success: true,
     data: {
@@ -72,6 +85,8 @@ exports.main = async (event) => {
       myPayment,
       canRefund,
       canEnroll: rush.status === 'OPEN',
+      display_participants: current + held,
+      participants,
     },
   };
 };

@@ -140,6 +140,8 @@
 | _id | string | 主键 |
 | court_rush_id | string | 关联 court_rush._id |
 | phoneNumber | string | 会员手机号 |
+| nickName | string | 微信昵称（必填） |
+| avatarUrl | string | 微信头像URL（必填） |
 | status | string | PENDING_PAYMENT / PAID / CANCEL_REQUESTED / CANCELLED / EXPIRED / REFUND_FAILED |
 | is_vip | boolean | 是否 VIP（可选留痕） |
 | actual_fee_yuan | number | 实收金额（元，VIP 五折等） |

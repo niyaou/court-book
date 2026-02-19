@@ -1,6 +1,6 @@
 <view class="container">
   <view class="user-info">
-    <image wx:if="{{wxUserProfile.avatarUrl}}" class="avatar" src="{{wxUserProfile.avatarUrl}}" mode="aspectFill"></image>
+    <image wx:if="{{wxUserProfile.avatarUrl || wxUserProfile.avatarUrlForDisplay}}" class="avatar" src="{{wxUserProfile.avatarUrlForDisplay || wxUserProfile.avatarUrl}}" mode="aspectFill"></image>
     <view wx:else class="avatar-placeholder">乐动网球</view>
 
     <view class="info">

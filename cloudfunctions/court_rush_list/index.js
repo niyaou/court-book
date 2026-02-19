@@ -41,6 +41,13 @@ exports.main = async (event) => {
 
   await cleanupExpiredEnrollments(db);
 
+  let isRushManager = false;
+  if (phoneNumber) {
+    const managerRes = await db.collection('manager').where({ phoneNumber }).limit(1).get();
+    const manager = (managerRes.data || [])[0];
+    isRushManager = manager && (Number(manager.courtRushManager || 0) >= 1 || Number(manager.specialManager || 0) >= 1);
+  }
+
   const where = {};
   if (campus) where.campus = campus;
 
@@ -49,11 +56,19 @@ exports.main = async (event) => {
   const rows = (rushRes.data || []).map((row) => {
     const startAt = new Date(row.start_at);
     const notStarted = startAt >= now;
+    const current = Number(row.current_participants || 0);
+    const held = Number(row.held_participants || 0);
     return {
       ...row,
+      display_participants: current + held,
       weak_display: !notStarted,
       not_started: notStarted,
     };
+  }).filter((row) => {
+    if (row.status === 'CANCELLED' && !isRushManager) {
+      return false;
+    }
+    return true;
   });
 
   rows.sort((a, b) => {

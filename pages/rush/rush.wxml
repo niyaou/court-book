@@ -2,7 +2,8 @@
   <view class="empty" wx:if="{{!list.length && !loading}}">暂无畅打</view>
   <view class="item {{item.weak_display ? 'weak' : ''}}" wx:for="{{list}}" wx:key="_id" bindtap="openDetail" data-id="{{item._id}}">
     <view class="title">{{item.campus}} · {{item.start_at}}</view>
-    <view class="line">人数 {{item.current_participants}}/{{item.max_participants}}</view>
+    <view class="line">人数 {{item.display_participants || item.current_participants || 0}}/{{item.max_participants}}</view>
+    <view class="line">费用 {{item.price_per_person_yuan}}元/人</view>
     <view class="line">状态 {{item.status}}</view>
   </view>
 </view>

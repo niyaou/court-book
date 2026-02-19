@@ -9,11 +9,10 @@ Page({
   onShow() {
     const phoneNumber = wx.getStorageSync('phoneNumber') || '';
     const app = getApp();
-    const managerList = app.globalData.managerList || [];
-    const specialManagerList = app.globalData.specialManagerList || [];
+    const courtRushManagerList = app.globalData.courtRushManagerList || [];
     this.setData({
       phoneNumber,
-      isManager: managerList.includes(phoneNumber) || specialManagerList.includes(phoneNumber)
+      isManager: courtRushManagerList.includes(phoneNumber)
     });
     this.loadList();
   },

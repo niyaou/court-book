@@ -3,9 +3,26 @@ const crypto = require('crypto');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
+function isAdminManager(manager) {
+  if (!manager || typeof manager !== 'object') return false;
+  const courtRushManager = Number(manager.courtRushManager || 0);
+  const specialManager = Number(manager.specialManager || 0);
+  return courtRushManager >= 1 || specialManager >= 1;
+}
+
 function generateRushId(phoneNumber, courtIds) {
   const base = `${phoneNumber || ''}${(courtIds || []).join(',')}${Date.now()}${Math.random()}`;
   return crypto.createHash('md5').update(base).digest('hex').substring(0, 32);
+}
+
+function addMinutes(time, minutes) {
+  if (!time || typeof time !== 'string') return null;
+  const [h, m] = time.split(':').map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return null;
+  const total = h * 60 + m + minutes;
+  const hour = Math.floor(total / 60).toString().padStart(2, '0');
+  const minute = (total % 60).toString().padStart(2, '0');
+  return `${hour}:${minute}`;
 }
 
 function parseCourtId(courtId) {
@@ -16,6 +33,7 @@ function parseCourtId(courtId) {
     courtNumber: parts[0],
     date: parts[1],
     start_time: parts[2],
+    end_time: addMinutes(parts[2], 30),
   };
 }
 
@@ -62,7 +80,7 @@ exports.main = async (event) => {
 
   const managerRes = await db.collection('manager').where({ phoneNumber }).limit(1).get();
   const manager = (managerRes.data || [])[0];
-  if (!manager || !(Number(manager.specialManager) >= 1 || Number(manager.courtRushManager) >= 1)) {
+  if (!isAdminManager(manager)) {
     return { success: false, error: 'NO_PERMISSION', message: 'No permission' };
   }
 
@@ -102,8 +120,11 @@ exports.main = async (event) => {
     if (existing && existing.status === 'free') {
       await db.collection('court_order_collection').doc(existing._id).update({
         data: {
+          end_time: info.end_time,
           status: 'booked',
-          booked_by: rushId,
+          booked_by: phoneNumber,
+          rush_id: rushId,
+          is_verified: false,
           source_type: 'COURT_RUSH',
           updated_at: now,
         },
@@ -119,9 +140,11 @@ exports.main = async (event) => {
           courtNumber: info.courtNumber,
           date: info.date,
           start_time: info.start_time,
-          end_time: null,
+          end_time: info.end_time,
           status: 'booked',
-          booked_by: rushId,
+          booked_by: phoneNumber,
+          rush_id: rushId,
+          is_verified: false,
           source_type: 'COURT_RUSH',
           version: 1,
           created_at: now,
@@ -134,7 +157,8 @@ exports.main = async (event) => {
 
   const sortedTimes = [...parsedList].sort((a, b) => a.start_time.localeCompare(b.start_time));
   const startAt = buildDateTime(sortedTimes[0].date, sortedTimes[0].start_time) || now;
-  const endAt = buildDateTime(sortedTimes[sortedTimes.length - 1].date, sortedTimes[sortedTimes.length - 1].start_time) || now;
+  const lastSlot = sortedTimes[sortedTimes.length - 1];
+  const endAt = buildDateTime(lastSlot.date, lastSlot.end_time || lastSlot.start_time) || now;
 
   const rushDoc = {
     _id: rushId,

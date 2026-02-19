@@ -258,7 +258,7 @@ Page({
                   booked_by: found.booked_by || '',
                   isBookedByManager: isBookedByManager,
                   source_type: found.source_type || '',
-                  rush_id: found.source_type === 'COURT_RUSH' ? found.booked_by : ''
+                  rush_id: found.source_type === 'COURT_RUSH' ? (found.rush_id || '') : ''
                 }
               } else {
                 return {
@@ -477,7 +477,7 @@ Page({
       times.forEach(item => {
         if (item.selected) {
           selectedCount += 0.5;
-          const price = parseFloat(item.text.replace(/[^\d.]/g, ''));
+          const price = parseFloat(String(item.text || '').replace(/[^\d.]/g, ''));
           if (!isNaN(price)) totalPrice += price;
         }
       });
@@ -572,7 +572,7 @@ Page({
                   booked_by: found.booked_by || '',
                   isBookedByManager: isBookedByManager,
                   source_type: found.source_type || '',
-                  rush_id: found.source_type === 'COURT_RUSH' ? found.booked_by : ''
+                  rush_id: found.source_type === 'COURT_RUSH' ? (found.rush_id || '') : ''
                 }
               } else {
                 return {
@@ -706,7 +706,7 @@ Page({
           if (m >= 60) { h += 1; m -= 60; }
           const end_time = `${h < 10 ? '0' + h : h}:${m === 0 ? '00' : '30'}`;
           // 价格
-          const price = parseFloat(item.text.replace(/[^\d.]/g, '')) || 0;
+          const price = parseFloat(String(item.text || '').replace(/[^\d.]/g, '')) || 0;
           total_fee += price;
           // 构造court_id: 场地号+日期+开始时间
           const court_id = `${courtNumber}_${date}_${item.time}`;

@@ -1,5 +1,5 @@
 const app = getApp();
-const { normalizeUserProfile, pickStoredUserProfile } = require('../../utils/userProfile');
+const { normalizeUserProfile, pickStoredUserProfile, isTempAvatarPath, uploadAvatarToCloud } = require('../../utils/userProfile.js');
 
 Page({
   data: {
@@ -55,13 +55,43 @@ Page({
         wx.setStorageSync('userProfile', profile);
       }
       this.setData({ wxUserProfile: profile });
+      this.ensureAvatarDisplayUrl(profile);
       return;
     }
 
     this.setData({
       wxUserProfile: {
         nickName: '',
-        avatarUrl: ''
+        avatarUrl: '',
+        avatarUrlForDisplay: ''
+      }
+    });
+  },
+
+  ensureAvatarDisplayUrl: function(profile) {
+    const avatarUrl = (profile && profile.avatarUrl && profile.avatarUrl.trim()) || '';
+    if (!avatarUrl) {
+      this.setData({ 'wxUserProfile.avatarUrlForDisplay': '' });
+      return;
+    }
+    if (!avatarUrl.startsWith('cloud://')) {
+      this.setData({ 'wxUserProfile.avatarUrlForDisplay': avatarUrl });
+      return;
+    }
+    wx.cloud.getTempFileURL({
+      fileList: [avatarUrl],
+      success: (res) => {
+        const list = res.fileList || [];
+        const file = list[0] || {};
+        const tempUrl = file.tempFileURL || '';
+        this.setData({
+          'wxUserProfile.avatarUrlForDisplay': tempUrl || avatarUrl
+        });
+      },
+      fail: () => {
+        this.setData({
+          'wxUserProfile.avatarUrlForDisplay': avatarUrl
+        });
       }
     });
   },
@@ -104,6 +134,29 @@ Page({
     });
   },
 
+  ensureCloudAvatar: async function() {
+    const phoneNumber = this.data.phoneNumber || wx.getStorageSync('phoneNumber');
+    const profile = this.data.wxUserProfile || {};
+    const avatarUrl = (profile.avatarUrl && profile.avatarUrl.trim()) || '';
+    const nickName = (profile.nickName && profile.nickName.trim()) || '';
+    if (!phoneNumber || !avatarUrl || !isTempAvatarPath(avatarUrl)) {
+      return;
+    }
+    console.log('avatar upload start (member onShow)', avatarUrl);
+    try {
+      const newUrl = await uploadAvatarToCloud(avatarUrl, phoneNumber);
+      console.log('avatar upload success (member onShow)', newUrl);
+      const updated = { nickName: nickName || '微信用户', avatarUrl: newUrl };
+      this.setData({ wxUserProfile: updated });
+      this.ensureAvatarDisplayUrl(updated);
+      wx.setStorageSync('userProfile', updated);
+      app.globalData.userProfile = updated;
+      app.globalData.userInfo = updated;
+    } catch (e) {
+      console.log('avatar upload fail (member onShow)', e);
+    }
+  },
+
   onLoad: function() {
     this.hydrateUserProfile();
     this.syncLoginViewState();
@@ -112,6 +165,7 @@ Page({
   onShow: function() {
     this.hydrateUserProfile();
     this.syncLoginViewState();
+    this.ensureCloudAvatar();
   },
 
   navigateToMyBookings: function() {
@@ -273,19 +327,33 @@ Page({
 
   noop: function() {},
 
-  confirmProfileAndLogin: function() {
+  confirmProfileAndLogin: async function() {
     const { pendingPhoneNumber, pendingProfile } = this.data;
-    const profile = normalizeUserProfile(pendingProfile);
-
     if (!pendingPhoneNumber) {
       wx.showToast({ title: '请先完成手机号授权', icon: 'none' });
       return;
     }
-
-    if (!profile) {
+    let avatarUrl = (pendingProfile.avatarUrl && pendingProfile.avatarUrl.trim()) || '';
+    const nickName = (pendingProfile.nickName && pendingProfile.nickName.trim()) || '';
+    if (!nickName || !avatarUrl) {
       wx.showToast({ title: '请补充头像和昵称', icon: 'none' });
       return;
     }
+    if (isTempAvatarPath(avatarUrl)) {
+      console.log('avatar upload start (member)', avatarUrl);
+      wx.showLoading({ title: '上传头像...' });
+      try {
+        avatarUrl = await uploadAvatarToCloud(avatarUrl, pendingPhoneNumber);
+        console.log('avatar upload success (member)', avatarUrl);
+      } catch (e) {
+        console.log('avatar upload fail (member)', e);
+        wx.hideLoading();
+        wx.showToast({ title: '头像上传失败', icon: 'none' });
+        return;
+      }
+      wx.hideLoading();
+    }
+    const profile = { nickName, avatarUrl };
 
     this.setData({
       phoneNumber: pendingPhoneNumber,
@@ -293,12 +361,10 @@ Page({
       wxUserProfile: profile,
       pendingPhoneNumber: '',
       pendingMaskedPhoneNumber: '',
-      pendingProfile: {
-        nickName: '',
-        avatarUrl: ''
-      },
+      pendingProfile: { nickName: '', avatarUrl: '' },
       needsProfileCompletion: false
     });
+    this.ensureAvatarDisplayUrl(profile);
 
     wx.setStorageSync('phoneNumber', pendingPhoneNumber);
     wx.setStorageSync('userProfile', profile);
@@ -306,18 +372,12 @@ Page({
     app.globalData.userProfile = profile;
     app.globalData.userInfo = profile;
 
-    wx.showToast({
-      title: '登录成功',
-      icon: 'success'
-    });
-
+    wx.showToast({ title: '登录成功', icon: 'success' });
     this.getMemberInfo();
     const redirect = wx.getStorageSync('postLoginRedirect');
     if (redirect && redirect.page === 'rushDetail' && redirect.rushId) {
       wx.removeStorageSync('postLoginRedirect');
-      wx.navigateTo({
-        url: `/pages/rushDetail/rushDetail?rushId=${redirect.rushId}`
-      });
+      wx.navigateTo({ url: `/pages/rushDetail/rushDetail?rushId=${redirect.rushId}` });
     }
   },
 

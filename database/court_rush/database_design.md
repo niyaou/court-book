@@ -57,6 +57,8 @@ isProject: false
 | _id | String | 主键 |
 | court_rush_id | String | 关联 court_rush._id |
 | phoneNumber | String | 会员手机号 |
+| nickName | String | 微信昵称（必填） |
+| avatarUrl | String | 微信头像URL（必填） |
 | status | String | PENDING_PAYMENT / PAID / CANCEL_REQUESTED / CANCELLED / EXPIRED / REFUND_FAILED |
 | is_vip | Boolean | 是否 VIP（可选留痕） |
 | actual_fee_yuan | Number | 实收金额（元，VIP 五折等） |

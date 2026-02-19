@@ -11,6 +11,7 @@ Page({
     pageSize: 35,
     hasMore: true,
     isAdmin: false,
+    isRushManager: false,
     lastUpdateTime: 0, // 记录最后更新时间，用于防抖
     targetCourtId: null, // 目标场地ID，用于定位订单
     targetOrderIndex: -1 // 目标订单索引，用于高亮显示
@@ -24,7 +25,9 @@ Page({
     const app = getApp();
 
     const managerList = app.globalData.managerList;
+    const courtRushManagerList = app.globalData.courtRushManagerList || [];
     const isAdmin = managerList && managerList.includes(phoneNumber);
+    const isRushManager = courtRushManagerList.includes(phoneNumber);
     
     // 获取目标场地ID参数
     const targetCourtId = options.targetCourtId ? decodeURIComponent(options.targetCourtId) : null;
@@ -32,6 +35,7 @@ Page({
     this.setData({ 
       phoneNumber:phoneNumber,
       isAdmin,
+      isRushManager,
       targetCourtId
     }, () => {
       this.loadOrders();
@@ -55,10 +59,13 @@ Page({
     const app = getApp();
     const phoneNumber = wx.getStorageSync('phoneNumber');
     const managerList = app.globalData.managerList;
+    const courtRushManagerList = app.globalData.courtRushManagerList || [];
     const isAdmin = managerList && managerList.includes(phoneNumber);
+    const isRushManager = courtRushManagerList.includes(phoneNumber);
     this.setData({ 
       phoneNumber: phoneNumber,
-      isAdmin
+      isAdmin,
+      isRushManager
     });
     
     // 页面显示时重新启动自动刷新
@@ -144,9 +151,23 @@ Page({
         return bt - at;
       });
 
+      const visibleOrders = merged.filter((item) => {
+        if (item.order_type === 'RUSH') {
+          const rushCanceled = item.rushStatus === 'CANCELLED';
+          if (rushCanceled && !this.data.isRushManager) {
+            return false;
+          }
+        }
+        const isCanceled = item.status === 'CANCEL' || item.status === 'CANCELLED';
+        if (isCanceled) {
+          return this.data.isAdmin;
+        }
+        return true;
+      });
+
       this.setData({
-        orderList: pageNum === 1 ? merged : [...this.data.orderList, ...merged],
-        hasMore: merged.length >= pageSize,
+        orderList: pageNum === 1 ? visibleOrders : [...this.data.orderList, ...visibleOrders],
+        hasMore: visibleOrders.length >= pageSize,
         lastUpdateTime: Date.now()
       }, () => {
         if (this.data.targetCourtId) {
