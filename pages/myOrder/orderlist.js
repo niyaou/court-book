@@ -136,7 +136,7 @@ Page({
       }),
       wx.cloud.callFunction({
         name: 'court_rush_my_order_list',
-        data: { phoneNumber, pageNum, pageSize }
+        data: { phoneNumber, pageNum, pageSize, clientNow: Date.now() }
       })
     ]).then(([normalRes, rushRes]) => {
       const normalOrders = (normalRes.result && normalRes.result.data) || [];

@@ -66,6 +66,15 @@ exports.main = async (event, context) => {
   const db = cloud.database()
   const { date, campus, courtNumber } = event
   
+  if (Math.floor(Date.now() / 1000) % 10 === 6) {
+    cloud.callFunction({
+      name: 'court_rush_auto_cancel',
+      data: {},
+    }).catch((err) => {
+      console.error('自动取消扫描失败', err);
+    });
+  }
+  
   // 调试：打印接收到的参数
   console.log('接收到的参数:', { date, campus, courtNumber })
 
@@ -89,7 +98,7 @@ exports.main = async (event, context) => {
   const countResult = await db.collection('court_order_collection').where({
     date,
     campus,
-    courtNumber // 可选，或遍历所有场地
+    courtNumber,
   }).count()
   const total = countResult.total
   const batchTimes = Math.ceil(total / MAX_LIMIT)
@@ -98,7 +107,7 @@ exports.main = async (event, context) => {
     const promise = db.collection('court_order_collection').where({
       date,
       campus,
-      courtNumber
+      courtNumber,
     }).skip(i * MAX_LIMIT).limit(MAX_LIMIT).get()
     tasks.push(promise)
   }

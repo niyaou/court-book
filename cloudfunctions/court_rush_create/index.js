@@ -150,6 +150,7 @@ exports.main = async (event) => {
           created_at: now,
           updated_at: now,
           price: null,
+          deleted_at: null,
         },
       });
     }

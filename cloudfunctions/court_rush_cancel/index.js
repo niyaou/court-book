@@ -31,13 +31,14 @@ exports.main = async (event) => {
 
   const rushRes = await db.collection('court_rush').doc(rushId).get();
   const rush = rushRes.data;
-  if (!rush) return { success: false, error: 'RUSH_NOT_FOUND' };
+  if (!rush || rush.deleted_at) return { success: false, error: 'RUSH_NOT_FOUND' };
 
   await db.collection('court_rush').doc(rushId).update({
     data: {
       status: 'CANCELLED',
       cancel_refund_status: 'PROCESSING',
       cancelled_at: db.serverDate(),
+      deleted_at: db.serverDate(),
       updated_at: db.serverDate(),
     },
   });
@@ -47,12 +48,20 @@ exports.main = async (event) => {
     rush_id: rushId,
   }).remove();
 
-  const enrollRes = await db.collection('court_rush_enrollment').where({ court_rush_id: rushId, status: 'PAID' }).get();
+  const enrollRes = await db.collection('court_rush_enrollment').where({
+    court_rush_id: rushId,
+    status: 'PAID',
+    deleted_at: db.command.eq(null),
+  }).get();
   const enrollments = enrollRes.data || [];
 
   let failed = 0;
   for (const enrollment of enrollments) {
-    const payRes = await db.collection('court_rush_payment').where({ enrollment_id: enrollment._id, status: 'PAIDED' }).limit(1).get();
+    const payRes = await db.collection('court_rush_payment').where({
+      enrollment_id: enrollment._id,
+      status: 'PAIDED',
+      deleted_at: db.command.eq(null),
+    }).limit(1).get();
     const payment = (payRes.data || [])[0];
     if (!payment) continue;
 

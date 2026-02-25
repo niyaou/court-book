@@ -21,6 +21,20 @@ Page({
     this.loadList().finally(() => wx.stopPullDownRefresh());
   },
 
+  formatRushTimeRange(startIso, endIso) {
+    const fmt = (iso, withDate) => {
+      if (!iso) return '';
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return iso;
+      const y = d.getFullYear(); const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0'); const h = String(d.getHours()).padStart(2, '0'); const min = String(d.getMinutes()).padStart(2, '0');
+      return withDate ? `${y}${m}${day} ${h}:${min}` : `${h}:${min}`;
+    };
+    const start = fmt(startIso, true);
+    const end = fmt(endIso, false);
+    return start && end ? `${start} - ${end}` : start || end || '';
+  },
+
   async loadList() {
     this.setData({ loading: true });
     try {
@@ -28,7 +42,12 @@ Page({
         name: 'court_rush_list',
         data: { phoneNumber: this.data.phoneNumber }
       });
-      this.setData({ list: (res.result && res.result.data) || [] });
+      const raw = (res.result && res.result.data) || [];
+      const list = raw.map((item) => ({
+        ...item,
+        time_display: this.formatRushTimeRange(item.start_at, item.end_at),
+      }));
+      this.setData({ list });
     } catch (err) {
       wx.showToast({ title: '加载失败', icon: 'none' });
     } finally {

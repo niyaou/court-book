@@ -14,6 +14,7 @@ Page({
     phoneNumber: '',
     detail: null,
     loading: false,
+    enrollLoading: false,
     isManager: false,
   },
 
@@ -45,14 +46,34 @@ Page({
     };
   },
 
+  formatRushTimeRange(startIso, endIso) {
+    const fmt = (iso, withDate) => {
+      if (!iso) return '';
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return iso;
+      const y = d.getFullYear(); const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0'); const h = String(d.getHours()).padStart(2, '0'); const min = String(d.getMinutes()).padStart(2, '0');
+      return withDate ? `${y}${m}${day} ${h}:${min}` : `${h}:${min}`;
+    };
+    const start = fmt(startIso, true);
+    const end = fmt(endIso, false);
+    return start && end ? `${start} - ${end}` : start || end || '';
+  },
+
   async loadDetail() {
     this.setData({ loading: true });
     try {
+      const phoneNumber = wx.getStorageSync('phoneNumber') || this.data.phoneNumber;
       const res = await wx.cloud.callFunction({
         name: 'court_rush_detail',
-        data: { rushId: this.data.rushId, phoneNumber: this.data.phoneNumber }
+        data: { rushId: this.data.rushId, phoneNumber, clientNow: Date.now() }
       });
-      this.setData({ detail: res.result && res.result.data });
+      const data = res.result && res.result.data;
+      if (data && data.rush) {
+        const r = data.rush;
+        r.time_display = this.formatRushTimeRange(r.start_at, r.end_at);
+      }
+      this.setData({ detail: data });
     } catch (err) {
       wx.showToast({ title: '加载失败', icon: 'none' });
     } finally {
@@ -83,6 +104,17 @@ Page({
         return;
       }
     }
+    this.setData({ enrollLoading: true });
+    wx.showLoading({ title: '报名中...' });
+    const timeoutMs = 60000;
+    const timeoutId = setTimeout(() => {
+      if (this._enrollTimedOut) return;
+      this._enrollTimedOut = true;
+      wx.hideLoading();
+      this.setData({ enrollLoading: false });
+      wx.showToast({ title: '请求超时', icon: 'none' });
+    }, timeoutMs);
+    this._enrollTimedOut = false;
     try {
       const res = await wx.cloud.callFunction({
         name: 'court_rush_enroll',
@@ -95,6 +127,10 @@ Page({
           avatarUrl,
         }
       });
+      clearTimeout(timeoutId);
+      if (this._enrollTimedOut) return;
+      wx.hideLoading();
+      this.setData({ enrollLoading: false });
       const result = res.result || {};
       if (!result.success) {
         wx.showToast({ title: result.error || '报名失败', icon: 'none' });
@@ -105,6 +141,11 @@ Page({
       }
       this.loadDetail();
     } catch (err) {
+      clearTimeout(timeoutId);
+      if (!this._enrollTimedOut) {
+        wx.hideLoading();
+        this.setData({ enrollLoading: false });
+      }
       wx.showToast({ title: '报名失败', icon: 'none' });
     }
   },

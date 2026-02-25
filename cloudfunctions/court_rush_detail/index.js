@@ -7,6 +7,7 @@ async function cleanupExpiredEnrollments(db, rushId) {
   const where = {
     status: 'PENDING_PAYMENT',
     expires_at: db.command.lt(now),
+    deleted_at: db.command.eq(null),
   };
   if (rushId) where.court_rush_id = rushId;
 
@@ -45,28 +46,45 @@ exports.main = async (event) => {
 
   if (!rushId) return { success: false, error: 'MISSING_RUSH_ID' };
 
+  cloud.callFunction({
+    name: 'court_rush_auto_cancel',
+    data: {},
+  }).catch((err) => {
+    console.error('自动取消扫描失败', err);
+  });
+
   await cleanupExpiredEnrollments(db, rushId);
 
   const rushRes = await db.collection('court_rush').doc(rushId).get();
   const rush = rushRes.data;
-  if (!rush) return { success: false, error: 'RUSH_NOT_FOUND' };
+  if (!rush || rush.deleted_at) return { success: false, error: 'RUSH_NOT_FOUND' };
 
   let myEnrollment = null;
   let myPayment = null;
   if (phoneNumber) {
-    const enrollRes = await db.collection('court_rush_enrollment').where({ court_rush_id: rushId, phoneNumber }).limit(1).get();
+    const enrollRes = await db.collection('court_rush_enrollment').where({
+      court_rush_id: rushId,
+      phoneNumber,
+      deleted_at: db.command.eq(null),
+    }).limit(1).get();
     myEnrollment = (enrollRes.data || [])[0] || null;
     if (myEnrollment) {
-      const payRes = await db.collection('court_rush_payment').where({ enrollment_id: myEnrollment._id }).limit(1).get();
+      const payRes = await db.collection('court_rush_payment').where({
+        enrollment_id: myEnrollment._id,
+        deleted_at: db.command.eq(null),
+      }).limit(1).get();
       myPayment = (payRes.data || [])[0] || null;
     }
   }
 
-  const canRefund = myEnrollment && myEnrollment.status === 'PAID' && (new Date(rush.start_at) - new Date()) / (1000 * 60 * 60) >= 6;
+  const now = event.clientNow != null ? new Date(event.clientNow) : new Date();
+  const hoursUntilStart = (new Date(rush.start_at).getTime() - now.getTime()) / (1000 * 60 * 60);
+  const canRefund = !!(myEnrollment && myEnrollment.status === 'PAID' && hoursUntilStart >= 6);
 
   const participantsRes = await db.collection('court_rush_enrollment').where({
     court_rush_id: rushId,
     status: db.command.in(['PENDING_PAYMENT', 'PAID']),
+    deleted_at: db.command.eq(null),
   }).get();
 
   const participants = (participantsRes.data || []).map((enroll) => ({
@@ -76,11 +94,13 @@ exports.main = async (event) => {
 
   const current = Number(rush.current_participants || 0);
   const held = Number(rush.held_participants || 0);
+  const firstId = rush.court_ids && (Array.isArray(rush.court_ids) ? rush.court_ids[0] : rush.court_ids);
+  const court_number = firstId ? String(firstId).split('_')[0] || '' : '';
 
   return {
     success: true,
     data: {
-      rush,
+      rush: { ...rush, court_number },
       myEnrollment,
       myPayment,
       canRefund,

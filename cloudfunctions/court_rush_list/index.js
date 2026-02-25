@@ -7,6 +7,7 @@ async function cleanupExpiredEnrollments(db) {
   const expiredRes = await db.collection('court_rush_enrollment').where({
     status: 'PENDING_PAYMENT',
     expires_at: db.command.lt(now),
+    deleted_at: db.command.eq(null),
   }).get();
 
   const expiredRows = expiredRes.data || [];
@@ -39,6 +40,13 @@ exports.main = async (event) => {
   const db = cloud.database();
   const { phoneNumber, campus, limit = 100 } = event || {};
 
+  cloud.callFunction({
+    name: 'court_rush_auto_cancel',
+    data: {},
+  }).catch((err) => {
+    console.error('自动取消扫描失败', err);
+  });
+
   await cleanupExpiredEnrollments(db);
 
   let isRushManager = false;
@@ -50,6 +58,13 @@ exports.main = async (event) => {
 
   const where = {};
   if (campus) where.campus = campus;
+  where.deleted_at = db.command.eq(null);
+
+  function courtNumberFromCourtIds(courtIds) {
+    const first = Array.isArray(courtIds) ? courtIds[0] : (typeof courtIds === 'string' ? courtIds : null);
+    if (first == null || first === '') return '';
+    return String(first).split('_')[0] || '';
+  }
 
   const rushRes = await db.collection('court_rush').where(where).limit(Number(limit)).get();
   const now = new Date();
@@ -60,6 +75,7 @@ exports.main = async (event) => {
     const held = Number(row.held_participants || 0);
     return {
       ...row,
+      court_number: courtNumberFromCourtIds(row.court_ids),
       display_participants: current + held,
       weak_display: !notStarted,
       not_started: notStarted,
@@ -81,6 +97,7 @@ exports.main = async (event) => {
     const enrollRes = await db.collection('court_rush_enrollment').where({
       court_rush_id: db.command.in(ids),
       phoneNumber,
+      deleted_at: db.command.eq(null),
     }).get();
 
     const map = new Map((enrollRes.data || []).map((e) => [e.court_rush_id, e]));

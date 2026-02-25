@@ -874,8 +874,9 @@ Page({
     const maxInput = await new Promise((resolve) => {
       wx.showModal({
         title: '输入人数上限',
+        content: '4',
         editable: true,
-        placeholderText: '例如 8',
+        placeholderText: '默认 4人',
         success: (res) => resolve(res)
       });
     });
@@ -891,9 +892,9 @@ Page({
     });
     if (!priceInput.confirm) return;
 
-    const max_participants = Number(maxInput.content);
+    const max_participants = Number(maxInput.content) || 4;
     const price_per_person_yuan = Number(priceInput.content);
-    if (!max_participants || !price_per_person_yuan) {
+    if (!price_per_person_yuan) {
       wx.showToast({ title: '输入无效', icon: 'none' });
       return;
     }

@@ -56,7 +56,6 @@ exports.main = async (event) => {
     phoneNumber,
     total_fee_yuan: Number(total_fee_yuan),
     status: 'PENDING',
-    payment_parmas: payRes.payment,
     payment_params: payRes.payment,
     createTime: db.serverDate(),
     paymentExpireTime,

@@ -18,22 +18,29 @@ exports.main = async (event) => {
     const res = await db.collection('court_rush_enrollment').doc(enrollment_id).get();
     enrollment = res.data;
   } else if (court_rush_id && phoneNumber) {
-    const res = await db.collection('court_rush_enrollment').where({ court_rush_id, phoneNumber }).limit(1).get();
+    const res = await db.collection('court_rush_enrollment').where({
+      court_rush_id,
+      phoneNumber,
+      deleted_at: db.command.eq(null),
+    }).limit(1).get();
     enrollment = (res.data || [])[0];
   }
 
-  if (!enrollment) return { success: false, error: 'ENROLLMENT_NOT_FOUND' };
+  if (!enrollment || enrollment.deleted_at) return { success: false, error: 'ENROLLMENT_NOT_FOUND' };
   if (enrollment.status !== 'PAID') return { success: false, error: 'INVALID_STATUS' };
 
   const rush = (await db.collection('court_rush').doc(enrollment.court_rush_id).get()).data;
-  if (!rush) return { success: false, error: 'RUSH_NOT_FOUND' };
+  if (!rush || rush.deleted_at) return { success: false, error: 'RUSH_NOT_FOUND' };
 
   const startAt = new Date(rush.start_at);
   const now = new Date();
   const hours = (startAt - now) / (1000 * 60 * 60);
   if (hours < 6) return { success: false, error: 'REFUND_WINDOW_CLOSED' };
 
-  const paymentRes = await db.collection('court_rush_payment').where({ enrollment_id: enrollment._id }).limit(1).get();
+  const paymentRes = await db.collection('court_rush_payment').where({
+    enrollment_id: enrollment._id,
+    deleted_at: db.command.eq(null),
+  }).limit(1).get();
   const payment = (paymentRes.data || [])[0];
   if (!payment || payment.status !== 'PAIDED') {
     return { success: false, error: 'PAYMENT_NOT_REFUNDABLE' };

@@ -60,6 +60,7 @@ async function cleanupExpiredEnrollments(db, rushId) {
   const where = {
     status: 'PENDING_PAYMENT',
     expires_at: db.command.lt(now),
+    deleted_at: db.command.eq(null),
   };
   if (rushId) where.court_rush_id = rushId;
 
@@ -118,11 +119,15 @@ exports.main = async (event) => {
 
   const rushRes = await db.collection('court_rush').doc(court_rush_id).get();
   const rush = rushRes.data;
-  if (!rush) return { success: false, error: 'RUSH_NOT_FOUND' };
+  if (!rush || rush.deleted_at) return { success: false, error: 'RUSH_NOT_FOUND' };
   if (rush.status !== 'OPEN') return { success: false, error: 'RUSH_NOT_OPEN' };
 
   const now = new Date();
-  const existingRes = await db.collection('court_rush_enrollment').where({ court_rush_id, phoneNumber }).limit(1).get();
+  const existingRes = await db.collection('court_rush_enrollment').where({
+    court_rush_id,
+    phoneNumber,
+    deleted_at: db.command.eq(null),
+  }).limit(1).get();
   const existing = (existingRes.data || [])[0];
 
   if (existing && existing.status === 'PAID') {
@@ -130,7 +135,11 @@ exports.main = async (event) => {
   }
 
   if (existing && existing.status === 'PENDING_PAYMENT' && existing.expires_at && new Date(existing.expires_at) > now) {
-    const payRes = await db.collection('court_rush_payment').where({ enrollment_id: existing._id, status: 'PENDING' }).limit(1).get();
+    const payRes = await db.collection('court_rush_payment').where({
+      enrollment_id: existing._id,
+      status: 'PENDING',
+      deleted_at: db.command.eq(null),
+    }).limit(1).get();
     const pay = (payRes.data || [])[0];
     if (pay && pay.paymentExpireTime && new Date(pay.paymentExpireTime) > now) {
       return {
@@ -146,9 +155,12 @@ exports.main = async (event) => {
   let gateOk = false;
   for (let i = 0; i < 3; i += 1) {
     const latest = (await db.collection('court_rush').doc(court_rush_id).get()).data;
-    if (!latest || latest.status !== 'OPEN') return { success: false, error: 'RUSH_NOT_OPEN' };
+    if (!latest || latest.deleted_at || latest.status !== 'OPEN') return { success: false, error: 'RUSH_NOT_OPEN' };
+    if (latest.auto_cancel_status === 'PROCESSING') {
+      return { success: false, error: 'RUSH_CANCELLING' };
+    }
     if (Number(latest.current_participants || 0) + Number(latest.held_participants || 0) >= Number(latest.max_participants || 0)) {
-      return { success: false, error: 'RUSH_FULL' };
+      return { success: false, error: '畅打已满员，请稍后再试' };
     }
 
     const gateRes = await db.collection('court_rush').where({
@@ -170,7 +182,7 @@ exports.main = async (event) => {
   }
 
   if (!gateOk) {
-    return { success: false, error: 'RUSH_FULL' };
+    return { success: false, error: '畅打已满员，请稍后再试' };
   }
 
   try {
@@ -226,7 +238,10 @@ exports.main = async (event) => {
       functionName: 'court_rush_order_callback',
     });
 
-    const existingPayRes = await db.collection('court_rush_payment').where({ enrollment_id: enrollmentId }).limit(1).get();
+    const existingPayRes = await db.collection('court_rush_payment').where({
+      enrollment_id: enrollmentId,
+      deleted_at: db.command.eq(null),
+    }).limit(1).get();
     const existingPay = (existingPayRes.data || [])[0];
     if (existingPay) {
       await db.collection('court_rush_payment').doc(existingPay._id).update({
@@ -237,7 +252,6 @@ exports.main = async (event) => {
           enrollment_id: enrollmentId,
           total_fee_yuan: actualFee,
           status: 'PENDING',
-          payment_parmas: payRes.payment,
           payment_params: payRes.payment,
           paymentExpireTime,
           paymentQueryTime: null,
@@ -255,7 +269,6 @@ exports.main = async (event) => {
         enrollment_id: enrollmentId,
         total_fee_yuan: actualFee,
         status: 'PENDING',
-        payment_parmas: payRes.payment,
         payment_params: payRes.payment,
         createTime: db.serverDate(),
         paymentExpireTime,

@@ -4,18 +4,19 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 exports.main = async (event) => {
   const db = cloud.database();
-  const { phoneNumber, pageNum = 1, pageSize = 20 } = event || {};
+  const { phoneNumber, pageNum = 1, pageSize = 20, clientNow } = event || {};
   if (!phoneNumber) return { success: false, error: 'MISSING_PHONE' };
 
   const managerRes = await db.collection('manager').where({ phoneNumber }).limit(1).get();
   const manager = (managerRes.data || [])[0];
   const isRushManager = manager && (Number(manager.courtRushManager || 0) >= 1 || Number(manager.specialManager || 0) >= 1);
 
-  const now = new Date();
+  const now = clientNow != null ? new Date(clientNow) : new Date();
   const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
 
   const query = {
     phoneNumber,
+    deleted_at: db.command.eq(null),
     _: db.command.or([
       { status: 'PAIDED' },
       { status: 'REFUNDED' },
@@ -43,13 +44,25 @@ exports.main = async (event) => {
   const enrollMap = new Map();
 
   if (rushIds.length) {
-    const rushRes = await db.collection('court_rush').where({ _id: db.command.in(rushIds) }).get();
+    const rushRes = await db.collection('court_rush').where({
+      _id: db.command.in(rushIds),
+      deleted_at: db.command.eq(null),
+    }).get();
     (rushRes.data || []).forEach((r) => rushMap.set(r._id, r));
   }
 
   if (enrollIds.length) {
-    const enrollRes = await db.collection('court_rush_enrollment').where({ _id: db.command.in(enrollIds) }).get();
+    const enrollRes = await db.collection('court_rush_enrollment').where({
+      _id: db.command.in(enrollIds),
+      deleted_at: db.command.eq(null),
+    }).get();
     (enrollRes.data || []).forEach((e) => enrollMap.set(e._id, e));
+  }
+
+  function courtNumberFromCourtIds(courtIds) {
+    const first = Array.isArray(courtIds) ? courtIds[0] : (typeof courtIds === 'string' ? courtIds : null);
+    if (first == null || first === '') return '';
+    return String(first).split('_')[0] || '';
   }
 
   const data = rows.map((row) => {
@@ -63,8 +76,11 @@ exports.main = async (event) => {
       court_ids: rush ? rush.court_ids : [],
       campus: rush ? rush.campus : '',
       title: rush ? `畅打 ${rush.campus}` : '畅打订单',
+      rush_start_at: rush ? rush.start_at : null,
+      rush_end_at: rush ? rush.end_at : null,
+      court_number: rush ? courtNumberFromCourtIds(rush.court_ids) : '',
       canPay: row.status === 'PENDING',
-      canRefund: !!(enroll && enroll.status === 'PAID' && rush && (new Date(rush.start_at) - now) / (1000 * 60 * 60) >= 6),
+      canRefund: !!(enroll && enroll.status === 'PAID' && rush && (new Date(rush.start_at).getTime() - now.getTime()) / (1000 * 60 * 60) >= 6),
       rushStatus: rush ? rush.status : null,
     };
   }).filter((item) => {
