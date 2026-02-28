@@ -42,6 +42,7 @@ isProject: false
 | held_participants | Number | 占位数（PENDING_PAYMENT 且未过期）；闸门计数，条件更新维护 |
 | price_per_person_yuan | Number | 每人报名费（元） |
 | status | String | OPEN / FULL / ENDED / CANCELLED |
+| title | String | 活动标题（创建时填写） |
 | created_by | String | 创建者手机号（管理员） |
 | start_at | Date | 开始时间（便于筛选/展示） |
 | end_at | Date | 结束时间（便于筛选/展示） |

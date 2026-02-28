@@ -22,15 +22,16 @@ Page({
   },
 
   formatRushTimeRange(startIso, endIso) {
-    const fmt = (iso, withDate) => {
+    const fmt = (iso, withDate, withSlash) => {
       if (!iso) return '';
       const d = new Date(iso);
       if (Number.isNaN(d.getTime())) return iso;
       const y = d.getFullYear(); const m = String(d.getMonth() + 1).padStart(2, '0');
       const day = String(d.getDate()).padStart(2, '0'); const h = String(d.getHours()).padStart(2, '0'); const min = String(d.getMinutes()).padStart(2, '0');
-      return withDate ? `${y}${m}${day} ${h}:${min}` : `${h}:${min}`;
+      if (!withDate) return `${h}:${min}`;
+      return withSlash ? `${y}/${m}/${day} ${h}:${min}` : `${y}${m}${day} ${h}:${min}`;
     };
-    const start = fmt(startIso, true);
+    const start = fmt(startIso, true, true);
     const end = fmt(endIso, false);
     return start && end ? `${start} - ${end}` : start || end || '';
   },
@@ -43,9 +44,11 @@ Page({
         data: { phoneNumber: this.data.phoneNumber }
       });
       const raw = (res.result && res.result.data) || [];
+      const statusText = { OPEN: '开放中', FULL: '已满', ENDED: '已结束', CANCELLED: '已取消' };
       const list = raw.map((item) => ({
         ...item,
         time_display: this.formatRushTimeRange(item.start_at, item.end_at),
+        status_display: statusText[item.status] || item.status,
       }));
       this.setData({ list });
     } catch (err) {

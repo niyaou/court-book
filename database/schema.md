@@ -125,6 +125,7 @@
 | held_participants | number | 占位数（PENDING_PAYMENT 且未过期）；闸门计数 |
 | price_per_person_yuan | number | 每人报名费（元） |
 | status | string | OPEN / FULL / ENDED / CANCELLED |
+| title | string | 活动标题（创建时填写） |
 | created_by | string | 创建者手机号（管理员） |
 | start_at | date | 开始时间（便于筛选/展示） |
 | end_at | date | 结束时间（便于筛选/展示） |

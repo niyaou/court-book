@@ -871,16 +871,28 @@ Page({
       return;
     }
 
-    const maxInput = await new Promise((resolve) => {
+    const maxChoice = await new Promise((resolve) => {
+      wx.showActionSheet({
+        itemList: ['2人', '4人'],
+        success: (res) => resolve({ confirm: true, tapIndex: res.tapIndex }),
+        fail: () => resolve({ confirm: false })
+      });
+    });
+    if (!maxChoice.confirm) return;
+
+    const titleInput = await new Promise((resolve) => {
       wx.showModal({
-        title: '输入人数上限',
-        content: '4',
+        title: '活动标题',
         editable: true,
-        placeholderText: '默认 4人',
+        placeholderText: '请输入',
         success: (res) => resolve(res)
       });
     });
-    if (!maxInput.confirm) return;
+    if (!titleInput.confirm) return;
+    if (!(titleInput.content || '').trim()) {
+      wx.showToast({ title: '请填写活动标题', icon: 'none' });
+      return;
+    }
 
     const priceInput = await new Promise((resolve) => {
       wx.showModal({
@@ -892,7 +904,7 @@ Page({
     });
     if (!priceInput.confirm) return;
 
-    const max_participants = Number(maxInput.content) || 4;
+    const max_participants = [2, 4][maxChoice.tapIndex];
     const price_per_person_yuan = Number(priceInput.content);
     if (!price_per_person_yuan) {
       wx.showToast({ title: '输入无效', icon: 'none' });
@@ -908,7 +920,8 @@ Page({
           campus: this.data.currentCampus,
           court_ids: slots.map(s => s.court_id),
           max_participants,
-          price_per_person_yuan
+          price_per_person_yuan,
+          title: (titleInput.content || '').trim()
         }
       });
       wx.hideLoading();

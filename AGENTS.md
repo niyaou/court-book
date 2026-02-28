@@ -1,7 +1,8 @@
-﻿## Skills
+## Skills
 A skill is a set of local instructions to follow that is stored in a `SKILL.md` file. Below is the list of skills that can be used. Each entry includes a name, description, and file path so you can open the source for full instructions when using a specific skill.
 
 ### Available skills
+- frontend-design: Create distinctive, production-grade frontend interfaces (web components, pages, dashboards, React/HTML/CSS). Use when building or beautifying web UI; avoids generic AI aesthetics. (file: C:/Users/Administrator/.cursor/skills/frontend-design/SKILL.md)
 - find-skills: Helps users discover and install agent skills when they ask questions like "how do I do X", "find a skill for X", "is there a skill that can...", or express interest in extending capabilities. This skill should be used when the user is looking for functionality that might exist as an installable skill. (file: C:/Users/34248/.agents/skills/find-skills/SKILL.md)
 - skill-creator: Guide for creating effective skills. This skill should be used when users want to create a new skill (or update an existing skill) that extends Codex's capabilities with specialized knowledge, workflows, or tool integrations. (file: C:/Users/34248/.codex/skills/.system/skill-creator/SKILL.md)
 - skill-installer: Install Codex skills into $CODEX_HOME/skills from a curated list or a GitHub repo path. Use when a user asks to list installable skills, install a curated skill, or install a skill from another repo (including private repos). (file: C:/Users/34248/.codex/skills/.system/skill-installer/SKILL.md)

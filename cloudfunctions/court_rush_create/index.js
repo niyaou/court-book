@@ -72,9 +72,11 @@ exports.main = async (event) => {
     max_participants,
     price_per_person_yuan,
     venue_total_fee_yuan,
+    title,
   } = event || {};
 
-  if (!phoneNumber || !campus || !Array.isArray(court_ids) || !court_ids.length || !max_participants || !price_per_person_yuan) {
+  const titleStr = title != null ? String(title).trim() : '';
+  if (!phoneNumber || !campus || !Array.isArray(court_ids) || !court_ids.length || !max_participants || !price_per_person_yuan || !titleStr) {
     return { success: false, error: 'INVALID_PARAMS', message: 'Missing required fields' };
   }
 
@@ -172,6 +174,7 @@ exports.main = async (event) => {
     venue_total_fee_yuan: Number(venue_total_fee_yuan || 0),
     total_revenue_yuan: 0,
     status: 'OPEN',
+    title: titleStr,
     created_by: phoneNumber,
     start_at: startAt,
     end_at: endAt,
