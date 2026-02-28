@@ -67,11 +67,12 @@ exports.main = async (event, context) => {
   const { date, campus, courtNumber } = event
   
   if (Math.floor(Date.now() / 1000) % 10 === 6) {
+    console.log('[get_court_order] 触发 court_rush_auto_cancel');
     cloud.callFunction({
       name: 'court_rush_auto_cancel',
       data: {},
-    }).catch((err) => {
-      console.error('自动取消扫描失败', err);
+    }).then(() => console.log('[get_court_order] court_rush_auto_cancel 调用成功')).catch((err) => {
+      console.error('[get_court_order] 自动取消扫描失败', err);
     });
   }
   

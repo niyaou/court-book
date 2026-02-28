@@ -40,11 +40,12 @@ exports.main = async (event) => {
   const db = cloud.database();
   const { phoneNumber, campus, limit = 100 } = event || {};
 
+  console.log('[court_rush_list] 触发 court_rush_auto_cancel');
   cloud.callFunction({
     name: 'court_rush_auto_cancel',
     data: {},
-  }).catch((err) => {
-    console.error('自动取消扫描失败', err);
+  }).then(() => console.log('[court_rush_list] court_rush_auto_cancel 调用成功')).catch((err) => {
+    console.error('[court_rush_list] 自动取消扫描失败', err);
   });
 
   await cleanupExpiredEnrollments(db);

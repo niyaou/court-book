@@ -46,11 +46,12 @@ exports.main = async (event) => {
 
   if (!rushId) return { success: false, error: 'MISSING_RUSH_ID' };
 
+  console.log('[court_rush_detail] 触发 court_rush_auto_cancel');
   cloud.callFunction({
     name: 'court_rush_auto_cancel',
     data: {},
-  }).catch((err) => {
-    console.error('自动取消扫描失败', err);
+  }).then(() => console.log('[court_rush_detail] court_rush_auto_cancel 调用成功')).catch((err) => {
+    console.error('[court_rush_detail] 自动取消扫描失败', err);
   });
 
   await cleanupExpiredEnrollments(db, rushId);
