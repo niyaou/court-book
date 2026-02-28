@@ -163,6 +163,10 @@ exports.main = async (event) => {
   const lastSlot = sortedTimes[sortedTimes.length - 1];
   const endAt = buildDateTime(lastSlot.date, lastSlot.end_time || lastSlot.start_time) || now;
 
+  const maxP = Number(max_participants);
+  const lateCount = parsedList.filter((p) => p.start_time >= '18:30').length;
+  const lighting_fee_yuan = maxP === 2 ? 0 : Math.ceil((lateCount * 10) / 4);
+
   const rushDoc = {
     _id: rushId,
     court_ids: uniqueCourtIds,
@@ -171,6 +175,7 @@ exports.main = async (event) => {
     current_participants: 0,
     held_participants: 0,
     price_per_person_yuan: Number(price_per_person_yuan),
+    lighting_fee_yuan,
     venue_total_fee_yuan: Number(venue_total_fee_yuan || 0),
     total_revenue_yuan: 0,
     status: 'OPEN',
@@ -190,5 +195,6 @@ exports.main = async (event) => {
     success: true,
     rushId,
     court_ids: uniqueCourtIds,
+    lighting_fee_yuan,
   };
 };

@@ -4,7 +4,7 @@
     <view class="subtitle" wx:if="{{detail.rush.title}}">{{detail.rush.title}}</view>
     <view class="line">{{detail.rush.time_display}}</view>
     <view class="line">人数 {{detail.display_participants || detail.rush.current_participants || 0}} / {{detail.rush.max_participants}}</view>
-    <view class="line">费用 {{detail.rush.price_per_person_yuan}}元/人</view>
+    <view class="line">费用 场地{{detail.rush.price_per_person_yuan}}元/人<text wx:if="{{detail.rush.lighting_fee_yuan}}">，灯光费{{detail.rush.lighting_fee_yuan}}元</text></view>
     <view class="line">状态 {{detail.rush.status}}</view>
   </view>
 

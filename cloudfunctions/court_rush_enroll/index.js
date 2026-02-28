@@ -26,6 +26,7 @@ async function getVipInfo(phoneNumber) {
   };
 
   if (!dbConfig.host || !dbConfig.user || !dbConfig.password || !dbConfig.database) {
+    console.warn('[getVipInfo] 外部库配置缺失，跳过查询', { hasHost: !!dbConfig.host, hasUser: !!dbConfig.user });
     return { isVip: false, balance: 0 };
   }
 
@@ -33,11 +34,17 @@ async function getVipInfo(phoneNumber) {
   try {
     connection = await mysql.createConnection(dbConfig);
     const [rows] = await connection.execute('SELECT rest_charge, annual_count, times_count FROM prepaid_card WHERE number = ? LIMIT 1', [phoneNumber]);
-    if (!rows.length) return { isVip: false, balance: 0 };
+    if (!rows.length) {
+      console.log('[getVipInfo] 未查到会员', { phoneNumber: phoneNumber ? `${phoneNumber.slice(0, 3)}****` : '' });
+      return { isVip: false, balance: 0 };
+    }
     const row = rows[0];
     const balance = Number(row.rest_charge || 0) + Number(row.annual_count || 0) * 150 + Number(row.times_count || 0) * 150;
-    return { isVip: balance > 0, balance };
+    const isVip = balance > 0;
+    console.log('[getVipInfo] 查询成功', { phoneNumber: phoneNumber ? `${phoneNumber.slice(0, 3)}****` : '', isVip, balance, rest_charge: row.rest_charge, annual_count: row.annual_count, times_count: row.times_count });
+    return { isVip, balance };
   } catch (err) {
+    console.error('[getVipInfo] 查询失败', { phoneNumber: phoneNumber ? `${phoneNumber.slice(0, 3)}****` : '', message: err.message, code: err.code });
     return { isVip: false, balance: 0 };
   } finally {
     if (connection) {
@@ -188,7 +195,9 @@ exports.main = async (event) => {
   try {
     const vipInfo = await getVipInfo(phoneNumber);
     const basePrice = Number(rush.price_per_person_yuan || 0);
-    const actualFee = vipInfo.isVip ? Math.ceil(basePrice / 2) : basePrice;
+    const courtFee = vipInfo.isVip ? Math.ceil(basePrice / 2) : basePrice;
+    const lightingFee = Number(rush.lighting_fee_yuan || 0);
+    const actualFee = courtFee + lightingFee;
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
     let enrollmentId = existing && existing._id;
