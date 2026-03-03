@@ -30,7 +30,7 @@
         <view class="card__main">
           <view class="card__top">
             <text class="card__activity">{{item.title || '畅打活动'}}</text>
-            <view class="card__campus-tag">
+            <view class="card__campus-tag card__campus-tag--{{item.campusColorIndex}}">
               <text class="card__campus-text">{{item.campus}} {{item.court_number}}</text>
             </view>
           </view>

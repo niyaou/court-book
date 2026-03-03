@@ -42,28 +42,11 @@ exports.main = async (event) => {
   }
 
   const now = new Date();
-  const createTime = toDate(payment.createTime) || toDate(payment.created_at) || now;
   const paymentExpireTime = toDate(payment.paymentExpireTime);
-  const paymentQueryTime = toDate(payment.paymentQueryTime);
-
-  const createDiffMinutes = (now - createTime) / (1000 * 60);
-  const queryDiffMinutes = paymentQueryTime ? (now - paymentQueryTime) / (1000 * 60) : 0;
-
   const expiredByWx = paymentExpireTime ? now > paymentExpireTime : false;
-  const expiredByCleanupWindow = createDiffMinutes > 5 && !paymentQueryTime;
-  const expiredByQueryWindow = paymentQueryTime && queryDiffMinutes > 1;
 
-  if (expiredByWx || expiredByCleanupWindow || expiredByQueryWindow) {
-    await db.collection('court_rush_payment').doc(docId).update({
-      data: { status: 'CANCEL', updated_at: db.serverDate() },
-    });
+  if (expiredByWx) {
     return { success: false, error: 'ORDER_EXPIRED', message: 'Order expired' };
-  }
-
-  if (!payment.paymentQueryTime) {
-    await db.collection('court_rush_payment').doc(docId).update({
-      data: { paymentQueryTime: db.serverDate(), updated_at: db.serverDate() },
-    });
   }
 
   return {

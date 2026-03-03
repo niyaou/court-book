@@ -1,3 +1,7 @@
+const { withRushLoading } = require('../../utils/rushLoading.js');
+const { getCampusColorIndex } = require('../../utils/campusColor.js');
+const { pickStoredUserProfile } = require('../../utils/userProfile.js');
+
 Page({
   data: {
     list: [],
@@ -7,8 +11,19 @@ Page({
   },
 
   onShow() {
-    const phoneNumber = wx.getStorageSync('phoneNumber') || '';
     const app = getApp();
+    const phoneNumber = wx.getStorageSync('phoneNumber') || '';
+    const storedUserProfile = wx.getStorageSync('userProfile');
+    const legacyUserInfo = wx.getStorageSync('userInfo');
+    const { profile } = pickStoredUserProfile({
+      userProfile: app.globalData.userProfile || storedUserProfile,
+      legacyUserInfo
+    });
+    if (!phoneNumber || !profile) {
+      wx.showToast({ title: '请先完善头像和昵称', icon: 'none' });
+      wx.switchTab({ url: '/pages/member/member' });
+      return;
+    }
     const courtRushManagerList = app.globalData.courtRushManagerList || [];
     this.setData({
       phoneNumber,
@@ -39,20 +54,21 @@ Page({
   async loadList() {
     this.setData({ loading: true });
     try {
-      const res = await wx.cloud.callFunction({
+      const res = await withRushLoading(() => wx.cloud.callFunction({
         name: 'court_rush_list',
         data: { phoneNumber: this.data.phoneNumber }
-      });
+      }));
       const raw = (res.result && res.result.data) || [];
       const statusText = { OPEN: '开放中', FULL: '已满', ENDED: '已结束', CANCELLED: '已取消' };
       const list = raw.map((item) => ({
         ...item,
         time_display: this.formatRushTimeRange(item.start_at, item.end_at),
         status_display: statusText[item.status] || item.status,
+        campusColorIndex: getCampusColorIndex(item.campus),
       }));
       this.setData({ list });
     } catch (err) {
-      wx.showToast({ title: '加载失败', icon: 'none' });
+      if (!err.timeout) wx.showToast({ title: '加载失败', icon: 'none' });
     } finally {
       this.setData({ loading: false });
     }

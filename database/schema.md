@@ -109,6 +109,19 @@
 
 ---
 
+### 6. rules（规则表）
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| _id | string | 是 | 云开发主键 |
+| type | string | 是 | 规则类型，如 rush=畅打规则 |
+| title | string | 否 | 规则标题 |
+| content | string | 否 | 规则正文 |
+
+**使用云函数**：court_rush_detail 按 type=rush 查询一条，将 title、content 随详情返回，用于畅打详情页展示。
+
+---
+
 ## 二、畅打模块（Court Rush）— 设计态
 
 以下三表见 `court_rush/database_design.md`，当前由云函数倒推的代码中尚未实现，仅作 schema 预留与联动说明。

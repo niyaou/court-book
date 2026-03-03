@@ -141,14 +141,16 @@ exports.main = async (event) => {
     return { success: false, error: 'ALREADY_JOINED' };
   }
 
-  if (existing && existing.status === 'PENDING_PAYMENT' && existing.expires_at && new Date(existing.expires_at) > now) {
+  if (existing && existing.status === 'PENDING_PAYMENT') {
     const payRes = await db.collection('court_rush_payment').where({
       enrollment_id: existing._id,
       status: 'PENDING',
       deleted_at: db.command.eq(null),
     }).limit(1).get();
     const pay = (payRes.data || [])[0];
-    if (pay && pay.paymentExpireTime && new Date(pay.paymentExpireTime) > now) {
+    const enrollmentValid = existing.expires_at && new Date(existing.expires_at) > now;
+    const payValid = pay && pay.paymentExpireTime && new Date(pay.paymentExpireTime) > now;
+    if (enrollmentValid && payValid) {
       return {
         success: true,
         enrollment_id: existing._id,
@@ -157,6 +159,27 @@ exports.main = async (event) => {
         status: 'PENDING_PAYMENT',
       };
     }
+    // 报名/支付已过期：取消本次，按未报名处理，不新建 payment
+    await db.collection('court_rush_enrollment').doc(existing._id).update({
+      data: { status: 'CANCELLED', updated_at: db.serverDate() },
+    });
+    const expiredPayRes = await db.collection('court_rush_payment').where({
+      enrollment_id: existing._id,
+      deleted_at: db.command.eq(null),
+    }).limit(1).get();
+    const expiredPay = (expiredPayRes.data || [])[0];
+    if (expiredPay) {
+      await db.collection('court_rush_payment').doc(expiredPay._id).update({
+        data: { status: 'CANCEL', updated_at: db.serverDate() },
+      });
+    }
+    await db.collection('court_rush').where({
+      _id: court_rush_id,
+      held_participants: db.command.gt(0),
+    }).update({
+      data: { held_participants: db.command.inc(-1), updated_at: db.serverDate() },
+    });
+    return { success: false, error: 'ENROLLMENT_EXPIRED', message: '报名已过期' };
   }
 
   let gateOk = false;

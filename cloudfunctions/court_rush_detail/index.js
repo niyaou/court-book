@@ -98,6 +98,14 @@ exports.main = async (event) => {
   const firstId = rush.court_ids && (Array.isArray(rush.court_ids) ? rush.court_ids[0] : rush.court_ids);
   const court_number = firstId ? String(firstId).split('_')[0] || '' : '';
 
+  // 畅打规则：rules 表 type=rush 取一条，仅返回 title、content
+  let rushRule = null;
+  try {
+    const ruleRes = await db.collection('rules').where({ type: 'rush' }).limit(1).get();
+    const rule = (ruleRes.data || [])[0];
+    if (rule) rushRule = { title: rule.title || '', content: rule.content || '' };
+  } catch (e) { /* 忽略，前端不展示 */ }
+
   return {
     success: true,
     data: {
@@ -108,6 +116,7 @@ exports.main = async (event) => {
       canEnroll: rush.status === 'OPEN',
       display_participants: current + held,
       participants,
+      rushRule,
     },
   };
 };
