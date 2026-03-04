@@ -7,7 +7,8 @@ Page({
     list: [],
     phoneNumber: '',
     isManager: false,
-    loading: false
+    loading: false,
+    page: 1
   },
 
   onShow() {
@@ -33,7 +34,7 @@ Page({
   },
 
   onPullDownRefresh() {
-    this.loadList().finally(() => wx.stopPullDownRefresh());
+    this.loadList(1).finally(() => wx.stopPullDownRefresh());
   },
 
   formatRushTimeRange(startIso, endIso) {
@@ -51,27 +52,61 @@ Page({
     return start && end ? `${start} - ${end}` : start || end || '';
   },
 
-  async loadList() {
-    this.setData({ loading: true });
+  async loadList(page) {
+    const currentPage = Number(page) > 0 ? Number(page) : (this.data.page || 1);
+    this.setData({ loading: true, page: currentPage });
     try {
       const res = await withRushLoading(() => wx.cloud.callFunction({
         name: 'court_rush_list',
-        data: { phoneNumber: this.data.phoneNumber }
+        data: { phoneNumber: this.data.phoneNumber, page: currentPage, pageSize: 20 }
       }));
       const raw = (res.result && res.result.data) || [];
-      const statusText = { OPEN: '开放中', FULL: '已满', ENDED: '已结束', CANCELLED: '已取消' };
-      const list = raw.map((item) => ({
-        ...item,
-        time_display: this.formatRushTimeRange(item.start_at, item.end_at),
-        status_display: statusText[item.status] || item.status,
-        campusColorIndex: getCampusColorIndex(item.campus),
-      }));
+      const now = Date.now();
+      const list = raw.map((item) => {
+        const startAt = item.start_at ? new Date(item.start_at) : null;
+        const endAt = item.end_at ? new Date(item.end_at) : null;
+        const startMs = startAt && !Number.isNaN(startAt.getTime()) ? startAt.getTime() : null;
+        const endMs = endAt && !Number.isNaN(endAt.getTime()) ? endAt.getTime() : null;
+        const total = Number(item.current_participants || 0) + Number(item.held_participants || 0);
+        const max = Number(item.max_participants || 0);
+        let statusDisplay = '';
+        if (item.status === 'CANCELLED' || item.deleted_at) {
+          statusDisplay = '已取消';
+        } else if (startMs != null && endMs != null) {
+          if (now >= endMs) statusDisplay = '已结束';
+          else if (now >= startMs) statusDisplay = '进行中';
+          else if (max > 0 && total >= max) statusDisplay = '已满';
+          else statusDisplay = '开放中';
+        } else {
+          statusDisplay = item.status || '';
+        }
+        return {
+          ...item,
+          time_display: this.formatRushTimeRange(item.start_at, item.end_at),
+          status_display: statusDisplay,
+          campusColorIndex: getCampusColorIndex(item.campus),
+        };
+      });
       this.setData({ list });
     } catch (err) {
       if (!err.timeout) wx.showToast({ title: '加载失败', icon: 'none' });
     } finally {
       this.setData({ loading: false });
     }
+  },
+
+  goPrevPage() {
+    if (this.data.loading) return;
+    const current = this.data.page || 1;
+    if (current <= 1) return;
+    this.loadList(current - 1);
+  },
+
+  goNextPage() {
+    if (this.data.loading) return;
+    if (!this.data.list || this.data.list.length < 20) return;
+    const current = this.data.page || 1;
+    this.loadList(current + 1);
   },
 
   openDetail(e) {

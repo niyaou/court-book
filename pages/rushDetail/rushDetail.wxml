@@ -3,17 +3,37 @@
     <text class="title" style="color: {{detail.campusColor || '#1a1a1a'}}">{{detail.rush.campus}} {{detail.rush.court_number}}</text>
     <text class="subtitle" wx:if="{{detail.rush.title}}">{{detail.rush.title}}</text>
     <view class="tags">
-      <view class="tag tag-status">状态: {{detail.rush.status}}</view>
+      <view class="tag tag-status">状态: {{detail.rush.status_display || detail.rush.status}}</view>
       <view class="tag tag-remain" wx:if="{{detail.timeUntilStartText}}">{{detail.timeUntilStartText}}</view>
     </view>
     <view class="detail-row"><view class="icon-wrap icon-time"></view><text>时间 {{detail.rush.time_display}}</text></view>
     <view class="detail-row"><view class="icon-wrap icon-people"></view><text>人数 {{detail.display_participants || detail.rush.current_participants || 0}}/{{detail.rush.max_participants}}</text></view>
-    <view class="detail-row"><view class="icon-wrap icon-fee"></view><text>费用 场地{{detail.rush.price_per_person_yuan}}元/人<text wx:if="{{detail.rush.lighting_fee_yuan}}">，灯光费{{detail.rush.lighting_fee_yuan}}元</text></text></view>
+    <view class="detail-row"><view class="icon-wrap icon-fee"></view><text>费用 场地{{detail.rush.price_per_person_yuan}}元/人<text wx:if="{{detail.rush.lighting_fee_yuan}}">，灯光费{{detail.rush.lighting_fee_yuan}}元/片</text></text></view>
   </view>
 
   <view class="card" wx:if="{{detail.rushRule}}">
     <view class="rule-title"><view class="icon-wrap icon-doc"></view><text>畅打规则</text></view>
-    <view class="rule-content">{{detail.rushRule.content}}</view>
+    <view class="rule-content">
+      <view class="rule-refund">
+        <text class="rule-refund-label">【退订规则】</text>
+        <text class="rule-refund-text">开场前 6小时内 取消预订，费用不予退还，敬请谅解。</text>
+      </view>
+      <view class="rule-block">
+        <text class="rule-block-title">【费用说明】</text>
+        <text class="rule-block-line">在籍会员享 5折优惠。</text>
+        <text class="rule-block-line">灯光费：20元/小时/片，已包含在支付费用中</text>
+      </view>
+      <view class="rule-block">
+        <text class="rule-block-title">【用球及场地公约】</text>
+        <text class="rule-block-line">场地不提供训练用球，如需购买 50元/筒。</text>
+        <text class="rule-block-line">全场禁止吸烟，禁止携带宠物。</text>
+        <text class="rule-block-line">运动自愿参加，请注意自身安全，乐动网球不承担意外及伤病连带责任。</text>
+      </view>
+      <view class="rule-origin" wx:if="{{detail.rushRule.content}}">
+        <text class="rule-block-title">【其他规则】</text>
+        <text class="rule-origin-text">{{detail.rushRule.content}}</text>
+      </view>
+    </view>
   </view>
 
   <view class="card" wx:if="{{detail.participants && detail.participants.length > 0}}">
@@ -29,8 +49,8 @@
   <view class="actions">
     <button class="btn btn-primary" loading="{{enrollLoading}}" disabled="{{enrollLoading}}" bindtap="continuePay" wx:if="{{detail.canEnroll && detail.myEnrollment && detail.myEnrollment.status === 'PENDING_PAYMENT'}}">继续支付</button>
     <button class="btn btn-warn" bindtap="cancelUnpaid" wx:if="{{detail.myEnrollment && detail.myEnrollment.status === 'PENDING_PAYMENT'}}">取消报名</button>
-    <button class="btn btn-primary {{(detail.display_participants || 0) >= (detail.rush.max_participants || 0) ? 'btn-disabled' : ''}}" loading="{{enrollLoading}}" disabled="{{enrollLoading || (detail.display_participants || 0) >= (detail.rush.max_participants || 0)}}" bindtap="enroll" wx:if="{{detail.canEnroll && (!detail.myEnrollment || (detail.myEnrollment.status !== 'PAID' && detail.myEnrollment.status !== 'PENDING_PAYMENT'))}}">报名</button>
+    <button class="btn btn-primary {{(!detail.canEnroll || (detail.display_participants || 0) >= (detail.rush.max_participants || 0)) ? 'btn-disabled' : ''}}" loading="{{enrollLoading}}" disabled="{{enrollLoading || !detail.canEnroll || (detail.display_participants || 0) >= (detail.rush.max_participants || 0)}}" bindtap="enroll" wx:if="{{!detail.myEnrollment || (detail.myEnrollment.status !== 'PAID' && detail.myEnrollment.status !== 'PENDING_PAYMENT')}}">{{detail.canEnroll ? '报名' : '不可报名'}}</button>
     <button class="btn btn-danger" bindtap="refund" wx:if="{{detail.canRefund}}">取消并退款</button>
-    <button class="btn btn-danger" bindtap="cancelRush" wx:if="{{isManager && detail.canEnroll}}">整场取消</button>
+    <button class="btn btn-danger" bindtap="cancelRush" wx:if="{{isManager && detail.canCancelRush}}">整场取消</button>
   </view>
 </view>

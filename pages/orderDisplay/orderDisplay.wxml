@@ -55,7 +55,7 @@
       <text class="modal-title">管理员退款</text>
       <view class="modal-close" bindtap="onCloseModal">×</view>
     </view>
-    <view class="modal-body">
+    <scroll-view class="modal-body" scroll-y="true">
       <view class="input-group">
         <text class="input-label">请输入管理员密码：</text>
         <input 
@@ -71,7 +71,7 @@
         <text class="order-info-text">订单号：{{currentOrder.outTradeNo || '未知'}}</text>
         <text class="order-info-text">金额：￥{{currentOrder.total_fee || 0}}</text>
       </view>
-    </view>
+    </scroll-view>
     <view class="modal-footer">
       <button class="btn-cancel" bindtap="onCloseModal">取消</button>
       <button class="btn-confirm" bindtap="onConfirmRefund" loading="{{refunding}}">确认退款</button>

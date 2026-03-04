@@ -54,12 +54,31 @@
           </view>
           <view class="card__cta" catchtap="openDetail" data-id="{{item._id}}">
             <view class="card__cta-gloss"></view>
-            <text class="card__cta-text">立即报名</text>
+            <text class="card__cta-text">{{item.status_display === '已结束' || item.status_display === '进行中' ? '查看详情' : '立即报名'}}</text>
             <text class="card__cta-arrow">›</text>
           </view>
         </view>
       </view>
     </view>
   </view>
-
+  <view wx:if="{{list.length}}" class="page__foot">
+    <view class="page__pager">
+      <view
+        class="page__pager-btn {{page <= 1 || loading ? 'page__pager-btn--disabled' : ''}}"
+        bindtap="goPrevPage"
+      >
+        <text class="page__pager-btn-arrow">‹</text>
+        <text class="page__pager-btn-text">上一页</text>
+      </view>
+      <text class="page__pager-text">第{{page}}页</text>
+      <view
+        class="page__pager-btn {{loading || list.length < 20 ? 'page__pager-btn--disabled' : ''}}"
+        bindtap="goNextPage"
+      >
+        <text class="page__pager-btn-text">下一页</text>
+        <text class="page__pager-btn-arrow">›</text>
+      </view>
+    </view>
+    <view class="page__foot-bar"></view>
+  </view>
 </view>

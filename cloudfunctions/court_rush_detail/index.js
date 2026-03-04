@@ -79,7 +79,9 @@ exports.main = async (event) => {
   }
 
   const now = event.clientNow != null ? new Date(event.clientNow) : new Date();
-  const hoursUntilStart = (new Date(rush.start_at).getTime() - now.getTime()) / (1000 * 60 * 60);
+  const startMs = new Date(rush.start_at).getTime();
+  const endMs = new Date(rush.end_at).getTime();
+  const hoursUntilStart = (startMs - now.getTime()) / (1000 * 60 * 60);
   const canRefund = !!(myEnrollment && myEnrollment.status === 'PAID' && hoursUntilStart >= 6);
 
   const participantsRes = await db.collection('court_rush_enrollment').where({
@@ -95,6 +97,8 @@ exports.main = async (event) => {
 
   const current = Number(rush.current_participants || 0);
   const held = Number(rush.held_participants || 0);
+  const total = current + held;
+  const max = Number(rush.max_participants || 0);
   const firstId = rush.court_ids && (Array.isArray(rush.court_ids) ? rush.court_ids[0] : rush.court_ids);
   const court_number = firstId ? String(firstId).split('_')[0] || '' : '';
 
@@ -106,6 +110,11 @@ exports.main = async (event) => {
     if (rule) rushRule = { title: rule.title || '', content: rule.content || '' };
   } catch (e) { /* 忽略，前端不展示 */ }
 
+  const canCancelRush = !rush.deleted_at
+    && rush.status !== 'CANCELLED'
+    && !Number.isNaN(endMs)
+    && now.getTime() < endMs;
+
   return {
     success: true,
     data: {
@@ -113,8 +122,15 @@ exports.main = async (event) => {
       myEnrollment,
       myPayment,
       canRefund,
-      canEnroll: rush.status === 'OPEN',
-      display_participants: current + held,
+      canEnroll: !rush.deleted_at
+        && rush.status !== 'CANCELLED'
+        && !Number.isNaN(startMs)
+        && !Number.isNaN(endMs)
+        && now.getTime() < startMs
+        && now.getTime() < endMs
+        && (max <= 0 || total < max),
+      canCancelRush,
+      display_participants: total,
       participants,
       rushRule,
     },

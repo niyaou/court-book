@@ -130,6 +130,14 @@ exports.main = async (event) => {
   if (rush.status !== 'OPEN') return { success: false, error: 'RUSH_NOT_OPEN' };
 
   const now = new Date();
+  const startMs = rush.start_at ? new Date(rush.start_at).getTime() : NaN;
+  const endMs = rush.end_at ? new Date(rush.end_at).getTime() : NaN;
+  if (!Number.isNaN(startMs) && now.getTime() >= startMs) {
+    return { success: false, error: 'RUSH_ALREADY_STARTED' };
+  }
+  if (!Number.isNaN(endMs) && now.getTime() >= endMs) {
+    return { success: false, error: 'RUSH_ENDED' };
+  }
   const existingRes = await db.collection('court_rush_enrollment').where({
     court_rush_id,
     phoneNumber,
@@ -258,7 +266,7 @@ exports.main = async (event) => {
     const paymentExpireTime = new Date(Date.now() + 4 * 60 * 1000);
     const payRes = await cloud.cloudPay.unifiedOrder({
       outTradeNo,
-      body: 'court rush payment',
+      body: '畅打订场',
       totalFee: Math.round(actualFee * 100),
       subMchId: '1716570749',
       nonceStr: nonceStr || generateOrderNo({ phoneNumber }).substring(0, 32),

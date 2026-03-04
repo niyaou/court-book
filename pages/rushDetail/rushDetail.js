@@ -48,8 +48,19 @@ Page({
   },
 
   onShareAppMessage() {
+    const rush = this.data.detail && this.data.detail.rush;
+    let title = '畅打报名';
+    if (rush) {
+      const courtText = [rush.campus, rush.court_number].filter(Boolean).join(' ');
+      const timeText = rush.time_display || '';
+      const base = rush.title || '畅打报名';
+      if (courtText && timeText) title = `${base}｜${timeText}｜${courtText}`;
+      else if (timeText) title = `${base}｜${timeText}`;
+      else if (courtText) title = `${base}｜${courtText}`;
+      else title = base;
+    }
     return {
-      title: '畅打报名',
+      title,
       path: `/pages/rushDetail/rushDetail?rushId=${this.data.rushId}`
     };
   },
@@ -95,14 +106,46 @@ Page({
       const data = res.result && res.result.data;
       if (data && data.rush) {
         const r = data.rush;
+        const now = Date.now();
+        const startDate = r.start_at ? new Date(r.start_at) : null;
+        const endDate = r.end_at ? new Date(r.end_at) : null;
+        const startMs = startDate && !Number.isNaN(startDate.getTime()) ? startDate.getTime() : null;
+        const endMs = endDate && !Number.isNaN(endDate.getTime()) ? endDate.getTime() : null;
+        const total = Number(r.current_participants || 0) + Number(r.held_participants || 0);
+        const max = Number(r.max_participants || 0);
+        let statusDisplay = '';
+        if (r.status === 'CANCELLED' || r.deleted_at) {
+          statusDisplay = '已取消';
+        } else if (startMs != null && endMs != null) {
+          if (now >= endMs) statusDisplay = '已结束';
+          else if (now >= startMs) statusDisplay = '进行中';
+          else if (max > 0 && total >= max) statusDisplay = '已满';
+          else statusDisplay = '开放中';
+        } else {
+          statusDisplay = r.status || '';
+        }
+        r.status_display = statusDisplay;
         r.time_display = this.formatRushTimeRange(r.start_at, r.end_at);
-        data.timeUntilStartText = this.formatTimeUntilStart(r.start_at);
+        if (startMs != null && endMs != null) {
+          if (now >= endMs) {
+            data.timeUntilStartText = '已结束';
+          } else if (now >= startMs) {
+            data.timeUntilStartText = '进行中';
+          } else {
+            data.timeUntilStartText = this.formatTimeUntilStart(r.start_at);
+          }
+        } else {
+          data.timeUntilStartText = this.formatTimeUntilStart(r.start_at);
+        }
         data.campusColor = getCampusColor(r.campus);
       }
       this.setData({ detail: data });
       if (this._timeTick) clearInterval(this._timeTick);
       const startAt = data?.rush?.start_at;
-      if (startAt) {
+      const endAt = data?.rush?.end_at;
+      const startMs = startAt ? new Date(startAt).getTime() : NaN;
+      const endMs = endAt ? new Date(endAt).getTime() : NaN;
+      if (!Number.isNaN(startMs) && !Number.isNaN(endMs) && Date.now() < startMs) {
         this._timeTick = setInterval(() => {
           const text = this.formatTimeUntilStart(startAt);
           this.setData({ 'detail.timeUntilStartText': text });
@@ -156,7 +199,13 @@ Page({
       const result = res.result || {};
       if (!result.success) {
         reloadDetail = false;
-        wx.showToast({ title: result.error === 'ENROLLMENT_EXPIRED' ? '报名已过期' : (result.error || '报名失败'), icon: 'none' });
+        const errCode = result.error || '';
+        let msg = '';
+        if (errCode === 'RUSH_ALREADY_STARTED') msg = '活动已开始，无法报名';
+        else if (errCode === 'RUSH_ENDED') msg = '活动已结束，无法报名';
+        else if (errCode === 'ENROLLMENT_EXPIRED') msg = '报名已结束';
+        else msg = errCode || '报名失败';
+        wx.showToast({ title: msg, icon: 'none' });
         setTimeout(() => this.loadDetail(), 1500);
         return;
       }
