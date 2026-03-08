@@ -1,6 +1,5 @@
 const { withRushLoading } = require('../../utils/rushLoading.js');
 const { getCampusColorIndex } = require('../../utils/campusColor.js');
-const { pickStoredUserProfile } = require('../../utils/userProfile.js');
 
 Page({
   data: {
@@ -14,17 +13,6 @@ Page({
   onShow() {
     const app = getApp();
     const phoneNumber = wx.getStorageSync('phoneNumber') || '';
-    const storedUserProfile = wx.getStorageSync('userProfile');
-    const legacyUserInfo = wx.getStorageSync('userInfo');
-    const { profile } = pickStoredUserProfile({
-      userProfile: app.globalData.userProfile || storedUserProfile,
-      legacyUserInfo
-    });
-    if (!phoneNumber || !profile) {
-      wx.showToast({ title: '请先完善头像和昵称', icon: 'none' });
-      wx.switchTab({ url: '/pages/member/member' });
-      return;
-    }
     const courtRushManagerList = app.globalData.courtRushManagerList || [];
     this.setData({
       phoneNumber,

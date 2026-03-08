@@ -145,11 +145,11 @@ Page({
     // Read phone number from storage every time page is shown
     const phoneNumber = wx.getStorageSync('phoneNumber');
     const app = getApp();
-    const managerList = app.globalData.managerList || [];
+    const courtRushManagerList = app.globalData.courtRushManagerList || [];
     const specialManagerList = app.globalData.specialManagerList || [];
     this.setData({ 
       phoneNumber: phoneNumber,
-      isRushManager: managerList.includes(phoneNumber) || specialManagerList.includes(phoneNumber)
+      isRushManager: courtRushManagerList.includes(phoneNumber) || specialManagerList.includes(phoneNumber)
     });
     
     // 检查是否需要切换校区

@@ -1,7 +1,6 @@
-const { isTempAvatarPath, uploadAvatarToCloud } = require('../../utils/userProfile.js');
+const { isTempAvatarPath, uploadAvatarToCloud, pickStoredUserProfile } = require('../../utils/userProfile.js');
 const { withRushLoading } = require('../../utils/rushLoading.js');
 const { getCampusColor } = require('../../utils/campusColor.js');
-const DEFAULT_AVATAR_URL = 'cloud://cloud1-6gebob4m4ba8f3de.636c-cloud1-6gebob4m4ba8f3de-1357716382/mp_asset/default_avatar.png';
 
 function genNonce() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -18,6 +17,7 @@ Page({
     loading: false,
     enrollLoading: false,
     isManager: false,
+    participantModal: { show: false, avatarUrl: '', nickName: '', phoneNumber: '', paidAmountYuan: null },
   },
 
   _timeTick: null,
@@ -37,12 +37,6 @@ Page({
     const courtRushManagerList = app.globalData.courtRushManagerList || [];
     const isManager = courtRushManagerList.includes(phoneNumber);
     this.setData({ phoneNumber, isManager });
-
-    if (!phoneNumber) {
-      wx.setStorageSync('postLoginRedirect', { page: 'rushDetail', rushId: this.data.rushId });
-      wx.switchTab({ url: '/pages/member/member' });
-      return;
-    }
 
     this.loadDetail();
   },
@@ -160,16 +154,27 @@ Page({
   },
 
   async enroll() {
-    const openid = wx.getStorageSync('openid');
+    const phoneNumber = wx.getStorageSync('phoneNumber') || this.data.phoneNumber || '';
     const app = getApp();
-    const userProfile = wx.getStorageSync('userProfile') || app.globalData.userProfile || {};
-    let nickName = (userProfile.nickName && userProfile.nickName.trim()) || '微信用户';
-    let avatarUrl = (userProfile.avatarUrl && userProfile.avatarUrl.trim()) || DEFAULT_AVATAR_URL;
+    const storedUserProfile = wx.getStorageSync('userProfile');
+    const legacyUserInfo = wx.getStorageSync('userInfo');
+    const { profile } = pickStoredUserProfile({
+      userProfile: app.globalData.userProfile || storedUserProfile,
+      legacyUserInfo
+    });
+    if (!phoneNumber || !profile) {
+      wx.showToast({ title: '请先完善头像和昵称', icon: 'none' });
+      wx.setStorageSync('postLoginRedirect', { page: 'rushDetail', rushId: this.data.rushId });
+      wx.switchTab({ url: '/pages/member/member' });
+      return;
+    }
+    const openid = wx.getStorageSync('openid');
+    let { nickName, avatarUrl } = profile;
     if (isTempAvatarPath(avatarUrl)) {
       console.log('avatar upload start (rushDetail)', avatarUrl);
       try {
         wx.showLoading({ title: '上传头像...' });
-        avatarUrl = await uploadAvatarToCloud(avatarUrl, this.data.phoneNumber || '');
+        avatarUrl = await uploadAvatarToCloud(avatarUrl, phoneNumber);
         console.log('avatar upload success (rushDetail)', avatarUrl);
         wx.hideLoading();
         const updated = { nickName, avatarUrl };
@@ -189,7 +194,7 @@ Page({
         name: 'court_rush_enroll',
         data: {
           court_rush_id: this.data.rushId,
-          phoneNumber: this.data.phoneNumber,
+          phoneNumber,
           openid,
           nonceStr: genNonce(),
           nickName,
@@ -306,20 +311,56 @@ Page({
   },
 
   async cancelRush() {
+    let success = false;
     try {
       const res = await withRushLoading(() => wx.cloud.callFunction({
         name: 'court_rush_cancel',
         data: { rushId: this.data.rushId, phoneNumber: this.data.phoneNumber }
       }), '取消中...');
       if (res.result && res.result.success) {
+        success = true;
         wx.showToast({ title: '已取消整场', icon: 'success' });
+        wx.navigateBack();
       } else {
         wx.showToast({ title: (res.result && res.result.error) || '取消失败', icon: 'none' });
       }
     } catch (err) {
       if (!err.timeout) wx.showToast({ title: '取消失败', icon: 'none' });
     } finally {
-      this.loadDetail();
+      if (!success) this.loadDetail();
+    }
+  },
+
+  closeParticipantModal() {
+    this.setData({ participantModal: { show: false, avatarUrl: '', nickName: '', phoneNumber: '', paidAmountYuan: null } });
+  },
+
+  async onParticipantTap(e) {
+    if (!this.data.isManager) return;
+    const enrollmentId = e.currentTarget.dataset.enrollmentId;
+    if (!enrollmentId) return;
+    try {
+      const res = await withRushLoading(() => wx.cloud.callFunction({
+        name: 'court_rush_participant_detail',
+        data: { rushId: this.data.rushId, enrollmentId, phoneNumber: this.data.phoneNumber }
+      }), '加载中...');
+      const result = res.result || {};
+      if (!result.success) {
+        wx.showToast({ title: result.error === 'NO_PERMISSION' ? '无权限' : (result.error || '加载失败'), icon: 'none' });
+        return;
+      }
+      const d = result.data || {};
+      this.setData({
+        participantModal: {
+          show: true,
+          avatarUrl: d.avatarUrl || '',
+          nickName: d.nickName || '微信用户',
+          phoneNumber: d.phoneNumber || '',
+          paidAmountYuan: d.paidAmountYuan != null ? d.paidAmountYuan : null,
+        }
+      });
+    } catch (err) {
+      if (!err.timeout) wx.showToast({ title: '加载失败', icon: 'none' });
     }
   }
 });

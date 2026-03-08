@@ -39,11 +39,20 @@
   <view class="card" wx:if="{{detail.participants && detail.participants.length > 0}}">
     <view class="rule-title"><view class="icon-wrap icon-people"></view><text>已报名人员</text></view>
     <view class="participants">
-      <view class="participant-item" wx:for="{{detail.participants}}" wx:key="index">
+      <view class="participant-item" wx:for="{{detail.participants}}" wx:key="index" data-enrollment-id="{{item.enrollmentId}}" bindtap="onParticipantTap">
         <image class="participant-avatar" src="{{item.avatarUrl}}" mode="aspectFill"></image>
         <text class="participant-name">{{item.nickName}}</text>
       </view>
     </view>
+  </view>
+
+  <view class="participant-modal-mask" wx:if="{{participantModal.show}}" catchtap="closeParticipantModal"></view>
+  <view class="participant-modal" wx:if="{{participantModal.show}}">
+    <image class="participant-modal-avatar" src="{{participantModal.avatarUrl}}" mode="aspectFill"></image>
+    <text class="participant-modal-name">{{participantModal.nickName}}</text>
+    <text class="participant-modal-phone">{{participantModal.phoneNumber}}</text>
+    <text class="participant-modal-price" wx:if="{{participantModal.paidAmountYuan != null}}">实付 {{participantModal.paidAmountYuan}} 元</text>
+    <view class="participant-modal-close" bindtap="closeParticipantModal">关闭</view>
   </view>
 
   <view class="actions">

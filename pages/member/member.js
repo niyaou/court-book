@@ -339,20 +339,6 @@ Page({
       wx.showToast({ title: '请补充头像和昵称', icon: 'none' });
       return;
     }
-    if (isTempAvatarPath(avatarUrl)) {
-      console.log('avatar upload start (member)', avatarUrl);
-      wx.showLoading({ title: '上传头像...' });
-      try {
-        avatarUrl = await uploadAvatarToCloud(avatarUrl, pendingPhoneNumber);
-        console.log('avatar upload success (member)', avatarUrl);
-      } catch (e) {
-        console.log('avatar upload fail (member)', e);
-        wx.hideLoading();
-        wx.showToast({ title: '头像上传失败', icon: 'none' });
-        return;
-      }
-      wx.hideLoading();
-    }
     const profile = { nickName, avatarUrl };
 
     this.setData({

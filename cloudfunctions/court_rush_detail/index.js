@@ -93,6 +93,7 @@ exports.main = async (event) => {
   const participants = (participantsRes.data || []).map((enroll) => ({
     nickName: enroll.nickName || '微信用户',
     avatarUrl: enroll.avatarUrl || '',
+    enrollmentId: enroll._id,
   }));
 
   const current = Number(rush.current_participants || 0);
