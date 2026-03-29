@@ -226,8 +226,9 @@ exports.main = async (event) => {
   try {
     const vipInfo = await getVipInfo(phoneNumber);
     const basePrice = Number(rush.price_per_person_yuan || 0);
-    const courtFee = vipInfo.isVip ? Math.ceil(basePrice / 2) : basePrice;
-    const lightingFee = Number(rush.lighting_fee_yuan || 0);
+    const maxP = Number(rush.max_participants || 0);
+    const courtFee = maxP === 2 ? (vipInfo.isVip ? 60 : 100) : (vipInfo.isVip ? Math.ceil(basePrice / 2) : basePrice);
+    const lightingFee = maxP === 2 ? 0 : Number(rush.lighting_fee_yuan || 0);
     const actualFee = courtFee + lightingFee;
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 

@@ -894,21 +894,24 @@ Page({
       return;
     }
 
-    const priceInput = await new Promise((resolve) => {
-      wx.showModal({
-        title: '输入每人价(元)',
-        editable: true,
-        placeholderText: '例如 99',
-        success: (res) => resolve(res)
-      });
-    });
-    if (!priceInput.confirm) return;
-
     const max_participants = [2, 4][maxChoice.tapIndex];
-    const price_per_person_yuan = Number(priceInput.content);
-    if (!price_per_person_yuan) {
-      wx.showToast({ title: '输入无效', icon: 'none' });
-      return;
+    let price_per_person_yuan = 100;
+    if (max_participants !== 2) {
+      const priceInput = await new Promise((resolve) => {
+        wx.showModal({
+          title: '输入每人价(元)',
+          editable: true,
+          placeholderText: '例如 99',
+          success: (res) => resolve(res)
+        });
+      });
+      if (!priceInput.confirm) return;
+      const n = Number(priceInput.content);
+      if (!n) {
+        wx.showToast({ title: '输入无效', icon: 'none' });
+        return;
+      }
+      price_per_person_yuan = n;
     }
 
     try {

@@ -44,7 +44,8 @@
           </view>
           <view class="card__row">
             <view class="card__ico card__ico--price"><text class="card__ico-yen">¥</text></view>
-            <text class="card__row-text">{{item.price_per_person_yuan}}元/人</text>
+            <text class="card__row-text" wx:if="{{item.max_participants == 2}}">100元/人</text>
+            <text class="card__row-text" wx:else>{{item.price_per_person_yuan}}元/人</text>
           </view>
         </view>
         <view class="card__right">

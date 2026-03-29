@@ -76,7 +76,8 @@ exports.main = async (event) => {
   } = event || {};
 
   const titleStr = title != null ? String(title).trim() : '';
-  if (!phoneNumber || !campus || !Array.isArray(court_ids) || !court_ids.length || !max_participants || !price_per_person_yuan || !titleStr) {
+  const maxP = Number(max_participants);
+  if (!phoneNumber || !campus || !Array.isArray(court_ids) || !court_ids.length || !maxP || (maxP !== 2 && !price_per_person_yuan) || !titleStr) {
     return { success: false, error: 'INVALID_PARAMS', message: 'Missing required fields' };
   }
 
@@ -163,18 +164,18 @@ exports.main = async (event) => {
   const lastSlot = sortedTimes[sortedTimes.length - 1];
   const endAt = buildDateTime(lastSlot.date, lastSlot.end_time || lastSlot.start_time) || now;
 
-  const maxP = Number(max_participants);
   const lateCount = parsedList.filter((p) => p.start_time >= '18:30').length;
   const lighting_fee_yuan = maxP === 2 ? 0 : Math.ceil((lateCount * 10) / 4);
+  const finalPrice = maxP === 2 ? 100 : Number(price_per_person_yuan);
 
   const rushDoc = {
     _id: rushId,
     court_ids: uniqueCourtIds,
     campus,
-    max_participants: Number(max_participants),
+    max_participants: maxP,
     current_participants: 0,
     held_participants: 0,
-    price_per_person_yuan: Number(price_per_person_yuan),
+    price_per_person_yuan: finalPrice,
     lighting_fee_yuan,
     venue_total_fee_yuan: Number(venue_total_fee_yuan || 0),
     total_revenue_yuan: 0,

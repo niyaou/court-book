@@ -1,6 +1,7 @@
 const cloud = require('wx-server-sdk');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
+const BATCH_SIZE = 1;
 
 function isAdminManager(manager) {
   if (!manager || typeof manager !== 'object') return false;
@@ -16,46 +17,21 @@ function generateNonce() {
   return result;
 }
 
-exports.main = async (event) => {
-  const db = cloud.database();
-  const rushId = event.court_rush_id || event.rushId;
-  const operatorPhone = event.phoneNumber;
+async function updateRefundPairStatus(db, paymentId, enrollmentId, paymentStatus, enrollmentStatus) {
+  await db.collection('court_rush_payment').doc(paymentId).update({ data: { status: paymentStatus, updated_at: db.serverDate() } });
+  await db.collection('court_rush_enrollment').doc(enrollmentId).update({ data: { status: enrollmentStatus, updated_at: db.serverDate() } });
+}
 
-  if (!rushId || !operatorPhone) return { success: false, error: 'INVALID_PARAMS' };
-
-  const managerRes = await db.collection('manager').where({ phoneNumber: operatorPhone }).limit(1).get();
-  const manager = (managerRes.data || [])[0];
-  if (!isAdminManager(manager)) {
-    return { success: false, error: 'NO_PERMISSION' };
-  }
-
-  const rushRes = await db.collection('court_rush').doc(rushId).get();
-  const rush = rushRes.data;
-  if (!rush || rush.deleted_at) return { success: false, error: 'RUSH_NOT_FOUND' };
-
-  await db.collection('court_rush').doc(rushId).update({
-    data: {
-      status: 'CANCELLED',
-      cancel_refund_status: 'PROCESSING',
-      cancelled_at: db.serverDate(),
-      deleted_at: db.serverDate(),
-      updated_at: db.serverDate(),
-    },
-  });
-
-  await db.collection('court_order_collection').where({
-    source_type: 'COURT_RUSH',
-    rush_id: rushId,
-  }).remove();
-
+async function processRefundBatch(db, rushId, batchSize) {
   const enrollRes = await db.collection('court_rush_enrollment').where({
     court_rush_id: rushId,
     status: 'PAID',
     deleted_at: db.command.eq(null),
-  }).get();
+  }).limit(batchSize).get();
   const enrollments = enrollRes.data || [];
-
   let failed = 0;
+  let success = 0;
+
   for (const enrollment of enrollments) {
     const payRes = await db.collection('court_rush_payment').where({
       enrollment_id: enrollment._id,
@@ -66,8 +42,7 @@ exports.main = async (event) => {
     if (!payment) continue;
 
     try {
-      await db.collection('court_rush_payment').doc(payment._id).update({ data: { status: 'REFUNDING', updated_at: db.serverDate() } });
-      await db.collection('court_rush_enrollment').doc(enrollment._id).update({ data: { status: 'CANCEL_REQUESTED', updated_at: db.serverDate() } });
+      await updateRefundPairStatus(db, payment._id, enrollment._id, 'REFUNDING', 'CANCEL_REQUESTED');
       await cloud.cloudPay.refund({
         out_refund_no: `${payment.outTradeNo}_R`,
         out_trade_no: payment.outTradeNo,
@@ -78,17 +53,75 @@ exports.main = async (event) => {
         envId: 'cloud1-6gebob4m4ba8f3de',
         functionName: 'court_rush_refund_callback',
       });
+      success += 1;
     } catch (err) {
       failed += 1;
+      await updateRefundPairStatus(db, payment._id, enrollment._id, 'PAIDED', 'PAID');
     }
   }
 
-  await db.collection('court_rush').doc(rushId).update({
-    data: {
-      cancel_refund_status: failed > 0 ? 'PARTIAL_FAILED' : 'DONE',
-      updated_at: db.serverDate(),
-    },
-  });
+  const remainRes = await db.collection('court_rush_enrollment').where({
+    court_rush_id: rushId,
+    status: 'PAID',
+    deleted_at: db.command.eq(null),
+  }).limit(1).get();
 
-  return { success: true, failed };
+  return { failed, success, hasMore: (remainRes.data || []).length > 0 };
+}
+
+exports.main = async (event) => {
+  const db = cloud.database();
+  const rushId = event.court_rush_id || event.rushId;
+  const operatorPhone = event.phoneNumber;
+  const internal = event.internal === true;
+  const batchSize = Math.max(1, Number(event.batchSize) || BATCH_SIZE);
+
+  if (!rushId || (!internal && !operatorPhone)) return { success: false, error: 'INVALID_PARAMS' };
+
+  if (!internal) {
+    const managerRes = await db.collection('manager').where({ phoneNumber: operatorPhone }).limit(1).get();
+    const manager = (managerRes.data || [])[0];
+    if (!isAdminManager(manager)) {
+      return { success: false, error: 'NO_PERMISSION' };
+    }
+  }
+
+  const rushRes = await db.collection('court_rush').doc(rushId).get();
+  const rush = rushRes.data;
+  if (!rush || rush.deleted_at) return { success: false, error: 'RUSH_NOT_FOUND' };
+
+  if (!internal) {
+    await db.collection('court_rush').doc(rushId).update({
+      data: {
+        status: 'CANCELLED',
+        cancel_refund_status: 'PROCESSING',
+        cancelled_at: db.serverDate(),
+        deleted_at: db.serverDate(),
+        updated_at: db.serverDate(),
+      },
+    });
+
+    await db.collection('court_order_collection').where({
+      source_type: 'COURT_RUSH',
+      rush_id: rushId,
+    }).remove();
+  }
+
+  const { failed, success, hasMore } = await processRefundBatch(db, rushId, batchSize);
+
+  if (hasMore) {
+    cloud.callFunction({
+      name: 'court_rush_cancel',
+      data: { court_rush_id: rushId, internal: true, batchSize },
+    }).catch(() => {});
+  } else {
+    await db.collection('court_rush').doc(rushId).update({
+      data: {
+        cancel_refund_status: failed > 0 ? 'PARTIAL_FAILED' : 'DONE',
+        updated_at: db.serverDate(),
+      },
+    });
+  }
+
+  return { success: true, failed, refunded: success, hasMore };
 };
