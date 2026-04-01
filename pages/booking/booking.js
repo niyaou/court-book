@@ -340,7 +340,27 @@ Page({
     return found ? found.times : [];
   },
 
-  onCourtTimeTap: function (e) {
+  getVipInfoByClubMember: async function(phoneNumber) {
+    if (!phoneNumber) return { isVip: false, balance: 0 };
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'club_member',
+        data: { phoneNumber }
+      });
+      const result = res && res.result;
+      if (!result || !result.success || !result.data) {
+        return { isVip: false, balance: 0 };
+      }
+      const row = result.data;
+      const balance = Number(row.rest_charge || 0) + Number(row.annual_count || 0) * 150 + Number(row.times_count || 0) * 150;
+      return { isVip: balance > 0, balance };
+    } catch (error) {
+      console.error('VIP查询失败:', error);
+      return { isVip: false, balance: 0 };
+    }
+  },
+
+  onCourtTimeTap: async function (e) {
     // 如果正在处理订单，不允许选择场地
     if (this.data.isProcessingOrder) {
       // wx.showToast({
@@ -424,17 +444,17 @@ Page({
         return;
       }
     } else {
-      // 普通用户只能预约今天和明天
+      const vipInfo = await this.getVipInfoByClubMember(phoneNumber);
+      const maxAdvanceDays = vipInfo.isVip ? 3 : 1;
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
-      const dayAfterTomorrow = new Date(today.getTime() + 2 * 24 * 60 * 60 * 1000);
+      const maxExclusiveDate = new Date(today.getTime() + (maxAdvanceDays + 1) * 24 * 60 * 60 * 1000);
       
       const selectedDateOnly = new Date(selectedDate);
       selectedDateOnly.setHours(0, 0, 0, 0);
-      if (selectedDateOnly >= dayAfterTomorrow) {
+      if (selectedDateOnly >= maxExclusiveDate) {
         wx.showToast({
-          title: '只能预约今明两天场地',
+          title: vipInfo.isVip ? 'VIP最多可提前3天预约' : '只能提前1天预约',
           icon: 'none'
         });
         return;

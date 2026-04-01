@@ -31,6 +31,53 @@ function generateOrderNo(params) {
   return hash.substring(0, 32);
 }
 
+async function getVipInfoByClubMember(phoneNumber) {
+  try {
+    const res = await cloud.callFunction({
+      name: 'club_member',
+      data: { phoneNumber }
+    })
+    const result = res && res.result
+    if (!result || !result.success || !result.data) {
+      return { isVip: false, balance: 0 }
+    }
+    const row = result.data
+    const balance = Number(row.rest_charge || 0) + Number(row.annual_count || 0) * 150 + Number(row.times_count || 0) * 150
+    return { isVip: balance > 0, balance }
+  } catch (error) {
+    console.error('VIP查询失败:', error)
+    return { isVip: false, balance: 0 }
+  }
+}
+
+function getLightingFee(startTime) {
+  return startTime >= '18:30' ? 10 : 0
+}
+
+async function calculateTotalFee(db, court_ids, campus, isVip) {
+  const uniqueCourtIds = [...new Set(court_ids || [])]
+  if (!uniqueCourtIds.length) {
+    throw new Error('INVALID_COURT_IDS')
+  }
+  const slotRes = await db.collection('court_order_collection').where({
+    campus,
+    court_id: db.command.in(uniqueCourtIds)
+  }).get()
+  const slotMap = new Map((slotRes.data || []).map(item => [item.court_id, item]))
+  let totalFee = 0
+  for (const courtId of uniqueCourtIds) {
+    const slot = slotMap.get(courtId)
+    if (!slot) {
+      throw new Error(`COURT_SLOT_NOT_FOUND:${courtId}`)
+    }
+    const price = Number(slot.price || 0)
+    const lightingFee = getLightingFee(slot.start_time || '')
+    const courtFee = Math.max(price - lightingFee, 0)
+    totalFee += isVip ? (courtFee / 2 + lightingFee) : price
+  }
+  return Math.round(totalFee * 100) / 100
+}
+
 // 检查重复订单
 async function checkDuplicateOrders(db, court_ids, campus) {
   // 计算7天前的时间
@@ -103,8 +150,6 @@ exports.main = async (event, ) => {
     }
   }
 
-  const outTradeNo = generateOrderNo(event)
-  
   // 检查重复订单
   const duplicateCheck = await checkDuplicateOrders(db, court_ids, campus);
   if (duplicateCheck.isDuplicate) {
@@ -114,6 +159,19 @@ exports.main = async (event, ) => {
       error: 'DUPLICATE_ORDER'
     };
   }
+  const vipInfo = await getVipInfoByClubMember(phoneNumber)
+  let finalTotalFee
+  try {
+    finalTotalFee = await calculateTotalFee(db, court_ids, campus, vipInfo.isVip)
+  } catch (error) {
+    console.error('金额计算失败:', error)
+    return {
+      success: false,
+      message: '订单金额计算失败',
+      error: 'FEE_CALC_FAILED'
+    }
+  }
+  const outTradeNo = generateOrderNo({ ...event, total_fee: finalTotalFee || total_fee })
 
   // 根据支付方式设置超时时间：刷卡至少1分钟，其他5分钟
   const tradeType = "JSAPI" // 当前使用小程序支付
@@ -130,7 +188,7 @@ exports.main = async (event, ) => {
   const res = await cloud.cloudPay.unifiedOrder({
     outTradeNo,
     body: `订场-在线支付`,
-    totalFee: total_fee*100,
+    totalFee: Math.round(finalTotalFee * 100),
     subMchId :"1716570749",
     nonceStr,
     openid,
@@ -142,9 +200,10 @@ exports.main = async (event, ) => {
   })
   console.log( {
     phoneNumber,
-    total_fee,
+    total_fee: finalTotalFee,
     court_ids,
     outTradeNo,
+    is_vip: vipInfo.isVip,
     payment_parmas:res.payment,
     createTime: db.serverDate(),
     timeExpire,
@@ -157,7 +216,7 @@ exports.main = async (event, ) => {
   await db.collection('pay_order').add({
     data: {
       phoneNumber,
-      total_fee,
+      total_fee: finalTotalFee,
       court_ids,
       campus:campus,
       outTradeNo,

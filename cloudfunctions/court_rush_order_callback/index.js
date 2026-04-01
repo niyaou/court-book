@@ -14,11 +14,11 @@ exports.main = async (event) => {
   const payment = (payRes.data || [])[0];
   if (!payment) return { errcode: 0, errmsg: 'order not found' };
 
-  if (payment.status !== 'PENDING') {
-    return { errcode: 0, message: 'idempotent skip' };
-  }
-
-  await db.collection('court_rush_payment').doc(payment._id).update({
+  const payUpdateRes = await db.collection('court_rush_payment').where({
+    _id: payment._id,
+    status: 'PENDING',
+    deleted_at: db.command.eq(null),
+  }).update({
     data: {
       status: 'PAIDED',
       paided_at: db.serverDate(),
@@ -26,6 +26,9 @@ exports.main = async (event) => {
       updated_at: db.serverDate(),
     },
   });
+  if (!payUpdateRes.stats || payUpdateRes.stats.updated !== 1) {
+    return { errcode: 0, message: 'idempotent skip' };
+  }
 
   await db.collection('court_rush_enrollment').doc(payment.enrollment_id).update({
     data: {
