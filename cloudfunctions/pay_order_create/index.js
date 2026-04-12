@@ -87,10 +87,97 @@ async function checkDuplicateOrders(db, court_ids, campus) {
   };
 }
 
+async function getVipInfo(phoneNumber) {
+  try {
+    // 复用现有会员查询云函数，实际由该云函数访问外部数据库
+    const res = await cloud.callFunction({
+      name: 'club_member',
+      data: { phoneNumber }
+    })
+    const result = res && res.result
+    if (!result || !result.success || !result.data) {
+      return { isVip: false, balance: 0 }
+    }
+    const member = result.data
+    const balance = Number(member.rest_charge || 0) + Number(member.annual_count || 0) * 150 + Number(member.times_count || 0) * 150
+    return { isVip: balance > 0, balance }
+  } catch (error) {
+    console.error('查询会员信息失败:', error)
+    return { isVip: false, balance: 0 }
+  }
+}
+
+function getBasePrice(court, campus) {
+  const courtPriceMapping = {
+    "麓坊校区": {
+      "1号风雨棚": 90,
+      "2号风雨棚": 90,
+      "3号风雨棚": 90,
+      "4号风雨棚": 90,
+      "5号风雨棚": 90,
+      "6号风雨棚": 90,
+      "7号室外": 60,
+      "8号室外": 60,
+      "9号室外": 60,
+      "10号室外": 60,
+      "11号红土风雨棚": 100
+    },
+    "桐梓林校区": {
+      "1号风雨棚": 60,
+      "2号风雨棚": 60
+    },
+    "雅居乐校区": {
+      "1号风雨棚": 90,
+      "2号室外": 60
+    }
+  }
+
+  const campusPrices = courtPriceMapping[campus] || courtPriceMapping["麓坊校区"]
+  return campusPrices[court] || 60
+}
+
+function getVipBasePrice(court, campus, basePrice, isVip) {
+  if (!isVip || campus !== "麓坊校区") return basePrice
+  if (court.includes("红土")) return 75
+  if (court.includes("室外")) return 40
+  if (court.includes("风雨棚")) return 75
+  return basePrice
+}
+
+function hasLightFee(startTime) {
+  const [hour, minute] = String(startTime || '').split(':').map(Number)
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return false
+  return hour > 18 || (hour === 18 && minute >= 30)
+}
+
+function calculateTotalFee(court_ids, campus, isVip) {
+  let total = 0
+  for (const courtId of court_ids) {
+    const parts = String(courtId || '').split('_')
+    if (parts.length < 3) {
+      throw new Error(`INVALID_COURT_ID:${courtId}`)
+    }
+    const startTime = parts[parts.length - 1]
+    const court = parts.slice(0, parts.length - 2).join('_')
+    const basePrice = getBasePrice(court, campus)
+    const finalBasePrice = getVipBasePrice(court, campus, basePrice, isVip)
+    total += finalBasePrice + (hasLightFee(startTime) ? 10 : 0)
+  }
+  return Math.round(total * 100) / 100
+}
+
 // 云函数入口函数
 exports.main = async (event, ) => {
-  const { phoneNumber,  total_fee,  openid,  court_ids  ,nonceStr,campus } = event
+  const { phoneNumber,  openid,  court_ids  ,nonceStr,campus } = event
   const db = cloud.database()
+
+  if (!Array.isArray(court_ids) || court_ids.length === 0) {
+    return {
+      success: false,
+      message: '所选场地无效',
+      error: 'INVALID_COURT_IDS'
+    }
+  }
   
   // 管理员预订时 pay_order 已在 update_court_order 中创建，此处不应重复调用
   const managerCheck = await db.collection('manager').where({ phoneNumber }).get()
@@ -103,8 +190,6 @@ exports.main = async (event, ) => {
     }
   }
 
-  const outTradeNo = generateOrderNo(event)
-  
   // 检查重复订单
   const duplicateCheck = await checkDuplicateOrders(db, court_ids, campus);
   if (duplicateCheck.isDuplicate) {
@@ -115,11 +200,25 @@ exports.main = async (event, ) => {
     };
   }
 
-  // 根据支付方式设置超时时间：刷卡至少1分钟，其他5分钟
+  // 服务端查询会员并重新计算订单金额，不信任前端传入 total_fee
+  const vipInfo = await getVipInfo(phoneNumber)
+  let total_fee = 0
+  try {
+    total_fee = calculateTotalFee(court_ids, campus, vipInfo.isVip)
+  } catch (error) {
+    return {
+      success: false,
+      message: '订单数据异常，请重新选择时段',
+      error: 'INVALID_COURT_ID'
+    }
+  }
+  const outTradeNo = generateOrderNo({ ...event, total_fee })
+
+  // 普通定场支付超时时间固定为2分钟
   const tradeType = "JSAPI" // 当前使用小程序支付
-  // 确保满足微信支付最小时间要求：刷卡至少1分钟，其他至少5分钟
-  const minTimeoutMinutes = tradeType === "MICROPAY" ? 1 : 5.1
-  const paymentTimeoutMinutes = tradeType === "MICROPAY" ? 1 : 5.2
+  // 保持刷卡至少1分钟，小程序支付按业务固定2分钟
+  const minTimeoutMinutes = tradeType === "MICROPAY" ? 1 : 2
+  const paymentTimeoutMinutes = tradeType === "MICROPAY" ? 1 : 2
   // 确保至少满足最小时间要求，向上取整到秒
   const timeoutSeconds = Math.max(minTimeoutMinutes * 60, Math.ceil(paymentTimeoutMinutes * 60))
   
@@ -130,7 +229,7 @@ exports.main = async (event, ) => {
   const res = await cloud.cloudPay.unifiedOrder({
     outTradeNo,
     body: `订场-在线支付`,
-    totalFee: total_fee*100,
+    totalFee: Math.round(total_fee * 100),
     subMchId :"1716570749",
     nonceStr,
     openid,
@@ -160,6 +259,8 @@ exports.main = async (event, ) => {
       total_fee,
       court_ids,
       campus:campus,
+      is_vip: vipInfo.isVip,
+      vip_balance: vipInfo.balance,
       outTradeNo,
       payment_parmas:res.payment,
       paymentTimeoutMinutes,

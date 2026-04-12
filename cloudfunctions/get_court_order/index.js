@@ -54,9 +54,11 @@ function getPrice(court, slot, campus) {
   // 获取对应校区的价格配置
   const campusPrices = court_price_mapping[campus] || court_price_mapping["麓坊校区"]; // 默认使用麓坊校区价格
   const basePrice = campusPrices[court] || 60; // 默认价格60元
-  
-  const [hour] = slot.start.split(':').map(Number);
-  return hour >= 18 ? basePrice + 10 : basePrice;
+
+  // 灯光费从18:30开始
+  const [hour, minute] = slot.start.split(':').map(Number)
+  const hasLightFee = hour > 18 || (hour === 18 && minute >= 30)
+  return hasLightFee ? basePrice + 10 : basePrice
 }
 
 // 云函数入口函数
