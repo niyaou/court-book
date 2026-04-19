@@ -280,7 +280,41 @@ exports.main = async (event, context) => {
     }
   }
 
-  // 5. 返回
+  // 5. 获取 VIP 预订信息
+  const bookedCourtIds = result
+    .filter(r => r.status === 'booked')
+    .map(r => r.court_id)
+    .filter(Boolean)
+  const uniqueBookedCourtIds = [...new Set(bookedCourtIds)]
+  
+  let vipCourtIdMap = {}
+  if (uniqueBookedCourtIds.length > 0) {
+    try {
+      const payOrderRes = await db.collection('pay_order').where({
+        status: 'PAIDED',
+        court_ids: db.command.in(uniqueBookedCourtIds)
+      }).get()
+      
+      payOrderRes.data.forEach(po => {
+        const isVip = po.is_vip === true
+        po.court_ids.forEach(cid => {
+          vipCourtIdMap[cid] = isVip
+        })
+      })
+      console.log('查询到 VIP 订单数量:', payOrderRes.data.length)
+    } catch (err) {
+      console.error('查询 pay_order VIP 信息失败:', err)
+    }
+  }
+  
+  // 合并 VIP 信息到结果
+  result.forEach(r => {
+    if (r.status === 'booked' && r.court_id) {
+      r.is_vip = vipCourtIdMap[r.court_id] || false
+    }
+  })
+
+  // 6. 返回
   console.log('最终返回结果数量:', result.length)
   console.log('最终返回数据大小:', JSON.stringify(result).length, 'bytes')
   

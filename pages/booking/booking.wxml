@@ -65,7 +65,7 @@
         <view class="court-main">
           <view class="court-container">
             <view class ="single-court" wx:for="{{courtList}}" wx:key="courtNumber">
-         <view class="court-status-item {{item.selected ? 'selected' : ''}} {{(item.booked_by === phoneNumber && item.status === 'booked') ? 'self-booked' : ''}} {{item.source_type === 'COURT_RUSH' ? 'rush-booked' : ''}} {{item.status === 'locked' ? (item.isBookedByManager && item.booked_by !== phoneNumber ? 'manager-locked' : (item.booked_by === phoneNumber ? 'self-locked' : 'other-locked')) : (item.status === 'booked' && item.isBookedByManager && item.booked_by !== phoneNumber ? 'manager-locked' : item.status)}}"
+         <view class="court-status-item {{item.selected ? 'selected' : ''}} {{(item.booked_by === phoneNumber && item.status === 'booked') ? 'self-booked' : ''}} {{item.source_type === 'COURT_RUSH' ? 'rush-booked' : ''}} {{item.status === 'locked' ? (item.isBookedByManager && item.booked_by !== phoneNumber ? 'manager-locked' : (item.booked_by === phoneNumber ? 'self-locked' : 'other-locked')) : (item.status === 'booked' && item.isBookedByManager && item.booked_by !== phoneNumber ? 'manager-locked' : (item.status === 'booked' && item.is_vip ? 'vip-booked' : item.status))}}"
                     wx:for="{{courtStatus[item.courtNumber]}}"
                     wx:key="time"
                     data-courtnumber="{{item.courtNumber}}"

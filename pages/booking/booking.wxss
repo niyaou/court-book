@@ -697,6 +697,10 @@ color: #103f6b;
   background:rgb(122, 29, 243);
   color:rgb(224, 224, 224);
 }
+.court-status-item.vip-booked {
+  background:rgb(9, 209, 199) !important;
+  color: #e8f5e9 !important;
+}
 .court-status-item.rush-booked {
   background: #1f8fff !important;
   color: #f4f9ff !important;

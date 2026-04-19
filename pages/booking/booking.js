@@ -258,7 +258,8 @@ Page({
                   booked_by: found.booked_by || '',
                   isBookedByManager: isBookedByManager,
                   source_type: found.source_type || '',
-                  rush_id: found.source_type === 'COURT_RUSH' ? found.booked_by : ''
+                  rush_id: found.source_type === 'COURT_RUSH' ? found.booked_by : '',
+                  is_vip: found.is_vip || false
                 }
               } else {
                 return {
