@@ -274,10 +274,12 @@
   color: #bbb;
   font-size: 28rpx;
   border-radius: 28rpx;
-  width: 140rpx;
+  width: 92px !important;
   padding: 10rpx 0;
   border: none;
-  margin: 0;
+  margin: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
   line-height: 1.2;
   text-align: center;
 }
@@ -296,6 +298,12 @@ color: #103f6b;
   margin-top: 0;
   background: #ebf3ff;
   color: #1f5dbf;
+}
+
+.booking-footer .footer-actions .footer-btn {
+  width: 92px !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
 }
 
 /* 页面整体布局 */

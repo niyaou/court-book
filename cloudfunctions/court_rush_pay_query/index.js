@@ -23,13 +23,17 @@ exports.main = async (event) => {
   if (paymentId) {
     const res = await db.collection('court_rush_payment').doc(paymentId).get();
     payment = res.data;
+    if (payment && payment.deleted_at) payment = null;
   } else {
-    const res = await db.collection('court_rush_payment').where({ outTradeNo }).limit(1).get();
+    const res = await db.collection('court_rush_payment').where({
+      outTradeNo,
+      deleted_at: db.command.eq(null),
+    }).limit(1).get();
     payment = (res.data || [])[0];
     docId = payment && payment._id;
   }
 
-  if (!payment) {
+  if (!payment || payment.deleted_at) {
     return { success: false, error: 'NOT_FOUND', message: 'Payment not found' };
   }
 
@@ -38,28 +42,11 @@ exports.main = async (event) => {
   }
 
   const now = new Date();
-  const createTime = toDate(payment.createTime) || toDate(payment.created_at) || now;
   const paymentExpireTime = toDate(payment.paymentExpireTime);
-  const paymentQueryTime = toDate(payment.paymentQueryTime);
-
-  const createDiffMinutes = (now - createTime) / (1000 * 60);
-  const queryDiffMinutes = paymentQueryTime ? (now - paymentQueryTime) / (1000 * 60) : 0;
-
   const expiredByWx = paymentExpireTime ? now > paymentExpireTime : false;
-  const expiredByCleanupWindow = createDiffMinutes > 5 && !paymentQueryTime;
-  const expiredByQueryWindow = paymentQueryTime && queryDiffMinutes > 1;
 
-  if (expiredByWx || expiredByCleanupWindow || expiredByQueryWindow) {
-    await db.collection('court_rush_payment').doc(docId).update({
-      data: { status: 'CANCEL', updated_at: db.serverDate() },
-    });
+  if (expiredByWx) {
     return { success: false, error: 'ORDER_EXPIRED', message: 'Order expired' };
-  }
-
-  if (!payment.paymentQueryTime) {
-    await db.collection('court_rush_payment').doc(docId).update({
-      data: { paymentQueryTime: db.serverDate(), updated_at: db.serverDate() },
-    });
   }
 
   return {
@@ -70,7 +57,6 @@ exports.main = async (event) => {
       court_rush_id: payment.court_rush_id,
       enrollment_id: payment.enrollment_id,
       total_fee_yuan: payment.total_fee_yuan,
-      payment_parmas: payment.payment_parmas || payment.payment_params,
       payment_params: payment.payment_params || payment.payment_parmas,
       status: payment.status,
     },

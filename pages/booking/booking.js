@@ -145,11 +145,11 @@ Page({
     // Read phone number from storage every time page is shown
     const phoneNumber = wx.getStorageSync('phoneNumber');
     const app = getApp();
-    const managerList = app.globalData.managerList || [];
+    const courtRushManagerList = app.globalData.courtRushManagerList || [];
     const specialManagerList = app.globalData.specialManagerList || [];
     this.setData({ 
       phoneNumber: phoneNumber,
-      isRushManager: managerList.includes(phoneNumber) || specialManagerList.includes(phoneNumber)
+      isRushManager: courtRushManagerList.includes(phoneNumber) || specialManagerList.includes(phoneNumber)
     });
     
     // 检查是否需要切换校区
@@ -341,7 +341,27 @@ Page({
     return found ? found.times : [];
   },
 
-  onCourtTimeTap: function (e) {
+  getVipInfoByClubMember: async function(phoneNumber) {
+    if (!phoneNumber) return { isVip: false, balance: 0 };
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'club_member',
+        data: { phoneNumber }
+      });
+      const result = res && res.result;
+      if (!result || !result.success || !result.data) {
+        return { isVip: false, balance: 0 };
+      }
+      const row = result.data;
+      const balance = Number(row.rest_charge || 0) + Number(row.annual_count || 0) * 150 + Number(row.times_count || 0) * 150;
+      return { isVip: balance > 0, balance };
+    } catch (error) {
+      console.error('VIP查询失败:', error);
+      return { isVip: false, balance: 0 };
+    }
+  },
+
+  onCourtTimeTap: async function (e) {
     // 如果正在处理订单，不允许选择场地
     if (this.data.isProcessingOrder) {
       // wx.showToast({
@@ -425,17 +445,17 @@ Page({
         return;
       }
     } else {
-      // 普通用户只能预约今天和明天
+      const vipInfo = await this.getVipInfoByClubMember(phoneNumber);
+      const maxAdvanceDays = vipInfo.isVip ? 3 : 1;
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
-      const dayAfterTomorrow = new Date(today.getTime() + 2 * 24 * 60 * 60 * 1000);
+      const maxExclusiveDate = new Date(today.getTime() + (maxAdvanceDays + 1) * 24 * 60 * 60 * 1000);
       
       const selectedDateOnly = new Date(selectedDate);
       selectedDateOnly.setHours(0, 0, 0, 0);
-      if (selectedDateOnly >= dayAfterTomorrow) {
+      if (selectedDateOnly >= maxExclusiveDate) {
         wx.showToast({
-          title: '只能预约今明两天场地',
+          title: vipInfo.isVip ? 'VIP最多可提前3天预约' : '只能提前1天预约',
           icon: 'none'
         });
         return;
@@ -478,7 +498,7 @@ Page({
       times.forEach(item => {
         if (item.selected) {
           selectedCount += 0.5;
-          const price = parseFloat(item.text.replace(/[^\d.]/g, ''));
+          const price = parseFloat(String(item.text || '').replace(/[^\d.]/g, ''));
           if (!isNaN(price)) totalPrice += price;
         }
       });
@@ -573,7 +593,7 @@ Page({
                   booked_by: found.booked_by || '',
                   isBookedByManager: isBookedByManager,
                   source_type: found.source_type || '',
-                  rush_id: found.source_type === 'COURT_RUSH' ? found.booked_by : ''
+                  rush_id: found.source_type === 'COURT_RUSH' ? (found.rush_id || '') : ''
                 }
               } else {
                 return {
@@ -707,7 +727,7 @@ Page({
           if (m >= 60) { h += 1; m -= 60; }
           const end_time = `${h < 10 ? '0' + h : h}:${m === 0 ? '00' : '30'}`;
           // 价格
-          const price = parseFloat(item.text.replace(/[^\d.]/g, '')) || 0;
+          const price = parseFloat(String(item.text || '').replace(/[^\d.]/g, '')) || 0;
           total_fee += price;
           // 构造court_id: 场地号+日期+开始时间
           const court_id = `${courtNumber}_${date}_${item.time}`;
@@ -872,31 +892,47 @@ Page({
       return;
     }
 
-    const maxInput = await new Promise((resolve) => {
+    const maxChoice = await new Promise((resolve) => {
+      wx.showActionSheet({
+        itemList: ['2人', '4人'],
+        success: (res) => resolve({ confirm: true, tapIndex: res.tapIndex }),
+        fail: () => resolve({ confirm: false })
+      });
+    });
+    if (!maxChoice.confirm) return;
+
+    const titleInput = await new Promise((resolve) => {
       wx.showModal({
-        title: '输入人数上限',
+        title: '活动标题',
         editable: true,
-        placeholderText: '例如 8',
+        placeholderText: '请输入',
         success: (res) => resolve(res)
       });
     });
-    if (!maxInput.confirm) return;
-
-    const priceInput = await new Promise((resolve) => {
-      wx.showModal({
-        title: '输入每人价(元)',
-        editable: true,
-        placeholderText: '例如 99',
-        success: (res) => resolve(res)
-      });
-    });
-    if (!priceInput.confirm) return;
-
-    const max_participants = Number(maxInput.content);
-    const price_per_person_yuan = Number(priceInput.content);
-    if (!max_participants || !price_per_person_yuan) {
-      wx.showToast({ title: '输入无效', icon: 'none' });
+    if (!titleInput.confirm) return;
+    if (!(titleInput.content || '').trim()) {
+      wx.showToast({ title: '请填写活动标题', icon: 'none' });
       return;
+    }
+
+    const max_participants = [2, 4][maxChoice.tapIndex];
+    let price_per_person_yuan = 100;
+    if (max_participants !== 2) {
+      const priceInput = await new Promise((resolve) => {
+        wx.showModal({
+          title: '输入每人价(元)',
+          editable: true,
+          placeholderText: '例如 99',
+          success: (res) => resolve(res)
+        });
+      });
+      if (!priceInput.confirm) return;
+      const n = Number(priceInput.content);
+      if (!n) {
+        wx.showToast({ title: '输入无效', icon: 'none' });
+        return;
+      }
+      price_per_person_yuan = n;
     }
 
     try {
@@ -908,7 +944,8 @@ Page({
           campus: this.data.currentCampus,
           court_ids: slots.map(s => s.court_id),
           max_participants,
-          price_per_person_yuan
+          price_per_person_yuan,
+          title: (titleInput.content || '').trim()
         }
       });
       wx.hideLoading();

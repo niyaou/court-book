@@ -37,7 +37,7 @@ exports.main = async (event) => {
 
   const payRes = await cloud.cloudPay.unifiedOrder({
     outTradeNo,
-    body: 'court rush payment',
+    body: '畅打订场',
     totalFee: Math.round(Number(total_fee_yuan) * 100),
     subMchId: '1716570749',
     nonceStr: nonceStr || generateOutTradeNo(event).substring(0, 32),
@@ -56,7 +56,6 @@ exports.main = async (event) => {
     phoneNumber,
     total_fee_yuan: Number(total_fee_yuan),
     status: 'PENDING',
-    payment_parmas: payRes.payment,
     payment_params: payRes.payment,
     createTime: db.serverDate(),
     paymentExpireTime,

@@ -109,6 +109,19 @@
 
 ---
 
+### 6. rules（规则表）
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| _id | string | 是 | 云开发主键 |
+| type | string | 是 | 规则类型，如 rush=畅打规则 |
+| title | string | 否 | 规则标题 |
+| content | string | 否 | 规则正文 |
+
+**使用云函数**：court_rush_detail 按 type=rush 查询一条，将 title、content 随详情返回，用于畅打详情页展示。
+
+---
+
 ## 二、畅打模块（Court Rush）— 设计态
 
 以下三表见 `court_rush/database_design.md`，当前由云函数倒推的代码中尚未实现，仅作 schema 预留与联动说明。
@@ -125,6 +138,7 @@
 | held_participants | number | 占位数（PENDING_PAYMENT 且未过期）；闸门计数 |
 | price_per_person_yuan | number | 每人报名费（元） |
 | status | string | OPEN / FULL / ENDED / CANCELLED |
+| title | string | 活动标题（创建时填写） |
 | created_by | string | 创建者手机号（管理员） |
 | start_at | date | 开始时间（便于筛选/展示） |
 | end_at | date | 结束时间（便于筛选/展示） |
@@ -140,6 +154,8 @@
 | _id | string | 主键 |
 | court_rush_id | string | 关联 court_rush._id |
 | phoneNumber | string | 会员手机号 |
+| nickName | string | 微信昵称（必填） |
+| avatarUrl | string | 微信头像URL（必填） |
 | status | string | PENDING_PAYMENT / PAID / CANCEL_REQUESTED / CANCELLED / EXPIRED / REFUND_FAILED |
 | is_vip | boolean | 是否 VIP（可选留痕） |
 | actual_fee_yuan | number | 实收金额（元，VIP 五折等） |

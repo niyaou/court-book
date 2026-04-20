@@ -42,6 +42,7 @@ isProject: false
 | held_participants | Number | 占位数（PENDING_PAYMENT 且未过期）；闸门计数，条件更新维护 |
 | price_per_person_yuan | Number | 每人报名费（元） |
 | status | String | OPEN / FULL / ENDED / CANCELLED |
+| title | String | 活动标题（创建时填写） |
 | created_by | String | 创建者手机号（管理员） |
 | start_at | Date | 开始时间（便于筛选/展示） |
 | end_at | Date | 结束时间（便于筛选/展示） |
@@ -57,6 +58,8 @@ isProject: false
 | _id | String | 主键 |
 | court_rush_id | String | 关联 court_rush._id |
 | phoneNumber | String | 会员手机号 |
+| nickName | String | 微信昵称（必填） |
+| avatarUrl | String | 微信头像URL（必填） |
 | status | String | PENDING_PAYMENT / PAID / CANCEL_REQUESTED / CANCELLED / EXPIRED / REFUND_FAILED |
 | is_vip | Boolean | 是否 VIP（可选留痕） |
 | actual_fee_yuan | Number | 实收金额（元，VIP 五折等） |

@@ -1,8 +1,85 @@
-<view class="container">
-  <view class="empty" wx:if="{{!list.length && !loading}}">暂无畅打</view>
-  <view class="item {{item.weak_display ? 'weak' : ''}}" wx:for="{{list}}" wx:key="_id" bindtap="openDetail" data-id="{{item._id}}">
-    <view class="title">{{item.campus}} · {{item.start_at}}</view>
-    <view class="line">人数 {{item.current_participants}}/{{item.max_participants}}</view>
-    <view class="line">状态 {{item.status}}</view>
+<view class="page">
+  <view class="page__bg">
+    <view class="page__bg-fill" aria-hidden="true"></view>
+    <view class="page__bg-lines" aria-hidden="true"></view>
+    <view class="page__bg-glow" aria-hidden="true"></view>
+    <view class="page__bg-sparkle page__bg-sparkle--1" aria-hidden="true"></view>
+    <view class="page__bg-sparkle page__bg-sparkle--2" aria-hidden="true"></view>
+    <view class="page__bg-sparkle page__bg-sparkle--3" aria-hidden="true"></view>
+    <view class="page__bg-sparkle page__bg-sparkle--4" aria-hidden="true"></view>
+    <view class="page__bg-sparkle page__bg-sparkle--5" aria-hidden="true"></view>
+  </view>
+  <view class="page__head">
+    <text class="page__title">畅打活动报名</text>
+    <text class="page__subtitle">选择场次，立即参与</text>
+  </view>
+  <view class="page__list">
+    <view class="empty" wx:if="{{!list.length && !loading}}">
+      <text class="empty-icon">◇</text>
+      <text class="empty-text">暂无活动</text>
+    </view>
+    <view
+      class="card {{item.weak_display ? 'card--weak' : ''}} card--{{item.status ? item.status.toLowerCase() : 'open'}}"
+      wx:for="{{list}}"
+      wx:key="_id"
+      bindtap="openDetail"
+      data-id="{{item._id}}"
+    >
+      <view class="card__glass"></view>
+      <view class="card__inner">
+        <view class="card__main">
+          <view class="card__top">
+            <text class="card__activity">{{item.title || '畅打活动'}}</text>
+            <view class="card__campus-tag card__campus-tag--{{item.campusColorIndex}}">
+              <text class="card__campus-text">{{item.campus}} {{item.court_number}}</text>
+            </view>
+          </view>
+          <view class="card__row">
+            <view class="card__ico card__ico--time"><view class="card__ico-sand-top"></view><view class="card__ico-sand-bottom"></view></view>
+            <text class="card__row-text">{{item.time_display}}</text>
+          </view>
+          <view class="card__row">
+            <view class="card__ico card__ico--people"><view class="card__ico-dot"></view><view class="card__ico-dot"></view></view>
+            <text class="card__row-text">已报 {{item.display_participants || item.current_participants || 0}}人 / 共{{item.max_participants}}人</text>
+          </view>
+          <view class="card__row">
+            <view class="card__ico card__ico--price"><text class="card__ico-yen">¥</text></view>
+            <text class="card__row-text" wx:if="{{item.max_participants == 2}}">100元/人</text>
+            <text class="card__row-text" wx:else>{{item.price_per_person_yuan}}元/人</text>
+          </view>
+        </view>
+        <view class="card__right">
+          <view class="card__status">
+            <view class="card__status-gloss"></view>
+            <text class="card__status-text">{{item.status_display || item.status}}</text>
+          </view>
+          <view class="card__cta" catchtap="openDetail" data-id="{{item._id}}">
+            <view class="card__cta-gloss"></view>
+            <text class="card__cta-text">{{item.status_display === '已结束' || item.status_display === '进行中' ? '查看详情' : '立即报名'}}</text>
+            <text class="card__cta-arrow">›</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+  <view wx:if="{{list.length}}" class="page__foot">
+    <view class="page__pager">
+      <view
+        class="page__pager-btn {{page <= 1 || loading ? 'page__pager-btn--disabled' : ''}}"
+        bindtap="goPrevPage"
+      >
+        <text class="page__pager-btn-arrow">‹</text>
+        <text class="page__pager-btn-text">上一页</text>
+      </view>
+      <text class="page__pager-text">第{{page}}页</text>
+      <view
+        class="page__pager-btn {{loading || list.length < 20 ? 'page__pager-btn--disabled' : ''}}"
+        bindtap="goNextPage"
+      >
+        <text class="page__pager-btn-text">下一页</text>
+        <text class="page__pager-btn-arrow">›</text>
+      </view>
+    </view>
+    <view class="page__foot-bar"></view>
   </view>
 </view>

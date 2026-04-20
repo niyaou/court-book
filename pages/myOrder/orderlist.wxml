@@ -5,7 +5,9 @@
     <block wx:for="{{orderList}}" wx:key="index">
       <view class="order-item {{ item.status === 'PAIDED' ? 'paided' :  ''}} {{ index === targetOrderIndex ? 'target-order' : '' }}" bindtap="onOrderItemClick" data-order="{{item}}">
         <view class="order-header">
-          <text class="order-time">创建时间: {{utils.formatTime(item.createTime)}}</text>
+          <text class="order-time" wx:if="{{item.order_type === 'RUSH' && item.rush_start_at}}">{{item.court_number ? item.court_number + ' ' : ''}}{{utils.formatTime(item.rush_start_at)}}{{item.rush_end_at ? ' - ' + utils.formatTime(item.rush_end_at) : ''}}</text>
+          <text class="order-time" wx:elif="{{item.order_type === 'RUSH'}}">创建时间: {{utils.formatTime(item.createTime)}}</text>
+          <text class="order-time" wx:else>创建时间: {{utils.formatTime(item.createTime)}}</text>
           <text class="order-time">{{item.order_type === 'RUSH' ? '畅打订单' : '普通订场'}}</text>
         </view>
         <view class="order-content">
@@ -15,7 +17,7 @@
                 <text class="campus-label">校区: </text>
                 <text class="campus-name">{{item.campus}}</text>
               </view>
-              <block wx:for="{{item.court_ids}}" wx:for-item="court" wx:key="*this">
+              <block wx:for="{{item.court_ids}}" wx:for-item="court" wx:key="*this" wx:if="{{item.order_type !== 'RUSH'}}">
                 <view class="court-module">
                   <text class="court-icon">🎾</text>
                   <text>{{court}}</text>
@@ -33,7 +35,7 @@
             </view>
           </view>
           <view class="order-details">
-            <text class="total-fee">总价: ￥{{item.total_fee}}</text>
+            <text class="total-fee">总价: ¥{{item.total_fee}}</text>
             <text class="status">状态: {{item.status === 'PENDING' ? '待支付' : item.status === 'PAIDED' ? '已支付' : item.status}}</text>
           </view>
         </view>
