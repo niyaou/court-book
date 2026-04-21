@@ -419,7 +419,7 @@ Page({
     //   return;
     // }
 
-    // 检查日期是否超过限制（特殊管理员14天，管理员7天，普通用户只能预约今天和明天）
+    // 检查日期是否超过限制（特殊管理员14天，管理员9天，普通用户只能预约今天和明天）
     if (isSpecialManager) {
       // 特殊管理员可以预约14天内
       const maxDays = 14;
@@ -433,8 +433,8 @@ Page({
         return;
       }
     } else if (isManager) {
-      // 管理员可以预约7天内
-      const maxDays = 7;
+      // 管理员可以预约9天内
+      const maxDays = 9;
       const maxDaysFromNow = new Date(now.getTime() + maxDays * 24 * 60 * 60 * 1000);
       
       if (selectedDate > maxDaysFromNow) {
