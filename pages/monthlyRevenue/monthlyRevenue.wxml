@@ -1,0 +1,66 @@
+<!--pages/monthlyRevenue/monthlyRevenue.wxml-->
+<view class="container">
+  <view class="page-header">
+    <text class="page-title">月度缴费汇总</text>
+    <text class="page-subtitle">管理员专用</text>
+  </view>
+
+  <view class="loading" wx:if="{{loading}}">
+    <text>加载中...</text>
+  </view>
+
+  <view class="empty" wx:elif="{{empty}}">
+    <text>暂无缴费数据</text>
+  </view>
+
+  <block wx:else>
+    <!-- 汇总表格 -->
+    <view class="summary-card" wx:for="{{monthTotals}}" wx:key="yearMonth" wx:for-item="month">
+      <view class="month-header">
+        <text class="month-title">{{month.yearMonth}}</text>
+        <text class="month-total">合计：¥{{month.totalAmount}}</text>
+      </view>
+      <view class="month-body">
+        <view class="table-header">
+          <text class="th th-campus">校区</text>
+          <text class="th th-booking">定场</text>
+          <text class="th th-rush">畅打</text>
+          <text class="th th-total">小计</text>
+        </view>
+        <view class="table-row" wx:for="{{summaryList}}" wx:key="index" wx:for-item="item" wx:if="{{item.yearMonth === month.yearMonth}}">
+          <text class="td td-campus">{{item.campus}}</text>
+          <text class="td td-booking {{item.bookingAmount > 0 ? 'highlight' : ''}}">{{item.bookingAmount > 0 ? '¥' + item.bookingAmount : '-'}}</text>
+          <text class="td td-rush {{item.rushAmount > 0 ? 'highlight-rush' : ''}}">{{item.rushAmount > 0 ? '¥' + item.rushAmount : '-'}}</text>
+          <text class="td td-total">¥{{item.totalAmount}}</text>
+        </view>
+        <view class="table-row month-summary-row">
+          <text class="td td-campus">当月合计</text>
+          <text class="td td-booking">¥{{month.bookingAmount}}</text>
+          <text class="td td-rush">¥{{month.rushAmount}}</text>
+          <text class="td td-total bold">¥{{month.totalAmount}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 总计 -->
+    <view class="grand-total-card" wx:if="{{grandTotal}}">
+      <view class="grand-header">
+        <text class="grand-title">全部总计</text>
+      </view>
+      <view class="grand-body">
+        <view class="grand-item">
+          <text class="grand-label">定场总额</text>
+          <text class="grand-value">¥{{grandTotal.bookingAmount}}</text>
+        </view>
+        <view class="grand-item">
+          <text class="grand-label">畅打总额</text>
+          <text class="grand-value rush">¥{{grandTotal.rushAmount}}</text>
+        </view>
+        <view class="grand-item total">
+          <text class="grand-label">合计</text>
+          <text class="grand-value">¥{{grandTotal.totalAmount}}</text>
+        </view>
+      </view>
+    </view>
+  </block>
+</view>

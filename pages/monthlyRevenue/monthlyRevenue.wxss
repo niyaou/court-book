@@ -1,0 +1,198 @@
+/* pages/monthlyRevenue/monthlyRevenue.wxss */
+.container {
+  padding: 20rpx;
+  background-color: #f5f5f5;
+  min-height: 100vh;
+}
+
+.page-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 30rpx 0;
+}
+
+.page-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.page-subtitle {
+  font-size: 24rpx;
+  color: #999;
+  margin-top: 8rpx;
+}
+
+.loading, .empty {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 100rpx 0;
+  color: #999;
+  font-size: 28rpx;
+}
+
+/* 月份卡片 */
+.summary-card {
+  background-color: #fff;
+  border-radius: 12rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.month-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24rpx 30rpx;
+  background-color: #1296db;
+}
+
+.month-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #fff;
+}
+
+.month-total {
+  font-size: 28rpx;
+  color: #fff;
+  font-weight: 500;
+}
+
+.month-body {
+  padding: 0 20rpx 20rpx;
+}
+
+/* 表格 */
+.table-header {
+  display: flex;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #eee;
+}
+
+.th {
+  font-size: 26rpx;
+  color: #666;
+  font-weight: 500;
+  text-align: center;
+}
+
+.th-campus { flex: 2; }
+.th-booking { flex: 2; }
+.th-rush { flex: 2; }
+.th-total { flex: 2; }
+
+.table-row {
+  display: flex;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+  align-items: center;
+}
+
+.td {
+  font-size: 28rpx;
+  color: #333;
+  text-align: center;
+}
+
+.td-campus { flex: 2; }
+.td-booking { flex: 2; }
+.td-rush { flex: 2; }
+.td-total { flex: 2; font-weight: 500; }
+
+.highlight {
+  color: #1296db;
+  font-weight: 500;
+}
+
+.highlight-rush {
+  color: #ff6b6b;
+  font-weight: 500;
+}
+
+.bold {
+  font-weight: bold;
+}
+
+.month-summary-row {
+  background-color: #f6f6f6;
+  border-radius: 8rpx;
+  margin-top: 10rpx;
+}
+
+.month-summary-row .td {
+  font-weight: bold;
+  color: #333;
+}
+
+/* 总计卡片 */
+.grand-total-card {
+  background-color: #fff;
+  border-radius: 12rpx;
+  margin-top: 10rpx;
+  margin-bottom: 40rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.grand-header {
+  padding: 24rpx 30rpx;
+  background-color: #333;
+}
+
+.grand-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #fff;
+}
+
+.grand-body {
+  padding: 20rpx 30rpx;
+}
+
+.grand-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.grand-item:last-child {
+  border-bottom: none;
+}
+
+.grand-item.total {
+  padding-top: 24rpx;
+  margin-top: 10rpx;
+  border-top: 2rpx solid #eee;
+}
+
+.grand-label {
+  font-size: 28rpx;
+  color: #666;
+}
+
+.grand-value {
+  font-size: 30rpx;
+  color: #333;
+  font-weight: bold;
+}
+
+.grand-value.rush {
+  color: #ff6b6b;
+}
+
+.grand-item.total .grand-label {
+  font-size: 30rpx;
+  color: #333;
+  font-weight: bold;
+}
+
+.grand-item.total .grand-value {
+  font-size: 34rpx;
+  color: #1296db;
+}

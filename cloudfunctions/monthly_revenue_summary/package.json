@@ -1,0 +1,9 @@
+{
+  "name": "monthly_revenue_summary",
+  "version": "1.0.0",
+  "description": "管理员查看每月各校区定场和畅打缴费总额",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

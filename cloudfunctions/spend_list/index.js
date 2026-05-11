@@ -88,7 +88,7 @@ exports.main = async (event, context) => {
       LEFT JOIN course c ON s.course_id = c.id
       LEFT JOIN court ct ON c.court_id = ct.id
       LEFT JOIN coach co ON c.coach_id = co.coach_id
-      WHERE pc.number = ?
+      WHERE pc.number = ? AND s.deleted_at IS NULL
       ORDER BY COALESCE(c.end_time, '1970-01-01 00:00:00') DESC, s.id DESC
       LIMIT ${limit} OFFSET ${offset}`
     
