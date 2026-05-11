@@ -233,6 +233,14 @@ exports.main = async (event) => {
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
     let enrollmentId = existing && existing._id;
+    // 如果 existing 是终态（非 PAID/非 PENDING_PAYMENT），软删除旧记录，避免退款/支付回调冲突
+    if (enrollmentId && !['PAID', 'PENDING_PAYMENT'].includes(existing.status)) {
+      await db.collection('court_rush_enrollment').doc(enrollmentId).update({
+        data: { deleted_at: db.serverDate(), updated_at: db.serverDate() },
+      });
+      enrollmentId = null;
+    }
+
     if (enrollmentId) {
       await db.collection('court_rush_enrollment').doc(enrollmentId).update({
         data: {
@@ -284,7 +292,8 @@ exports.main = async (event) => {
       deleted_at: db.command.eq(null),
     }).limit(1).get();
     const existingPay = (existingPayRes.data || [])[0];
-    if (existingPay) {
+    // 只有 PENDING/EXPIRED 的 payment 可以复用；终态 payment 必须创建新的，防止覆盖 outTradeNo 导致退款回调找不到
+    if (existingPay && ['PENDING', 'EXPIRED'].includes(existingPay.status)) {
       await db.collection('court_rush_payment').doc(existingPay._id).update({
         data: {
           outTradeNo,
