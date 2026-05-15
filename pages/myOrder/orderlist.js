@@ -12,6 +12,10 @@ Page({
     hasMore: true,
     isAdmin: false,
     isRushManager: false,
+    showCancelReasonModal: false,
+    currentCancelOrder: null,
+    cancelReason: '',
+    canceling: false,
     lastUpdateTime: 0, // 记录最后更新时间，用于防抖
     targetCourtId: null, // 目标场地ID，用于定位订单
     targetOrderIndex: -1 // 目标订单索引，用于高亮显示
@@ -354,31 +358,96 @@ Page({
       });
       return;
     }
+
+    if (this.data.isAdmin) {
+      this.setData({
+        showCancelReasonModal: true,
+        currentCancelOrder: order,
+        cancelReason: ''
+      });
+      return;
+    }
+
     wx.showModal({
       title: '确认取消',
       content: '确定要取消该订单吗？',
       success: (res) => {
         if (res.confirm) {
-          wx.cloud.callFunction({
-            name: 'cancel_order',
-            data: {
-              order
-            }
-          }).then(() => {
-            wx.showToast({
-              title: '取消成功',
-              icon: 'success'
-            });
-            this.onPullDownRefresh();
-          }).catch(err => {
-            console.error('取消订单失败', err);
-            wx.showToast({
-              title: '取消失败',
-              icon: 'none'
-            });
-          });
+          this.submitCancelOrder(order, '客户退款取消');
         }
       }
+    });
+  },
+
+  onCancelReasonInput: function(e) {
+    this.setData({
+      cancelReason: e.detail.value
+    });
+  },
+
+  onCloseCancelReasonModal: function() {
+    if (this.data.canceling) return;
+    this.setData({
+      showCancelReasonModal: false,
+      currentCancelOrder: null,
+      cancelReason: ''
+    });
+  },
+
+  onCancelReasonModalContentClick: function() {
+  },
+
+  onConfirmCancelWithReason: function() {
+    const reason = (this.data.cancelReason || '').trim();
+    if (!reason) {
+      wx.showToast({
+        title: '请输入取消理由',
+        icon: 'none'
+      });
+      return;
+    }
+
+    this.submitCancelOrder(this.data.currentCancelOrder, reason);
+  },
+
+  submitCancelOrder: function(order, cancelReason) {
+    if (!order || this.data.canceling) return;
+
+    this.setData({ canceling: true });
+    wx.cloud.callFunction({
+      name: 'cancel_order',
+      data: {
+        order,
+        cancelReason,
+        operatorPhoneNumber: this.data.phoneNumber
+      }
+    }).then((res) => {
+      if (res.result && res.result.success === false) {
+        wx.showToast({
+          title: res.result.message || '取消失败',
+          icon: 'none'
+        });
+        return;
+      }
+
+      wx.showToast({
+        title: '取消成功',
+        icon: 'success'
+      });
+      this.setData({
+        showCancelReasonModal: false,
+        currentCancelOrder: null,
+        cancelReason: ''
+      });
+      this.onPullDownRefresh();
+    }).catch(err => {
+      console.error('取消订单失败', err);
+      wx.showToast({
+        title: '取消失败',
+        icon: 'none'
+      });
+    }).finally(() => {
+      this.setData({ canceling: false });
     });
   },
   // 生成随机字符串

@@ -1,68 +1,109 @@
-// 云函数入口文件
 const cloud = require('wx-server-sdk')
 
-cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV }) // 使用当前云环境
+cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
-// 云函数入口函数
-exports.main = async (event, ) => {
-  const { order } = event
-  const { _id, court_ids } = order
+const DEFAULT_CANCEL_REASON = '客户退款取消'
+
+exports.main = async (event) => {
+  const { order, cancelReason, operatorPhoneNumber } = event
+  const { _id } = order || {}
 
   const db = cloud.database()
-  
-  // 查询订单
-  const orderResult = await db.collection('pay_order').doc(_id).get()
-  
-  // 检查订单是否存在
-  if (!orderResult.data) {
+
+  if (!_id) {
     return {
-    
+      success: false,
       message: '订单不存在'
     }
   }
 
-  const phoneNumber = orderResult.data.phoneNumber
-  
-  // 检查是否是管理员
+  const orderResult = await db.collection('pay_order').doc(_id).get()
+
+  if (!orderResult.data) {
+    return {
+      success: false,
+      message: '订单不存在'
+    }
+  }
+
+  const orderData = orderResult.data
+  const orderPhoneNumber = orderData.phoneNumber
+  const courtIds = Array.isArray(orderData.court_ids) ? orderData.court_ids : []
+  if (!orderData.campus) {
+    return {
+      success: false,
+      message: '订单缺少校区信息，无法安全取消'
+    }
+  }
+  const cancelOperatorPhone = operatorPhoneNumber || orderPhoneNumber
+  const trimmedReason = (cancelReason || '').trim()
+
+  const operatorManagerCheck = cancelOperatorPhone
+    ? await db.collection('manager').where({ phoneNumber: cancelOperatorPhone }).get()
+    : { data: [] }
+  const isOperatorManager = operatorManagerCheck.data && operatorManagerCheck.data.length > 0
+
+  const isOperatorCancelingOwnOrder = isOperatorManager && cancelOperatorPhone === orderPhoneNumber
+
+  if (isOperatorCancelingOwnOrder && (!trimmedReason || trimmedReason === DEFAULT_CANCEL_REASON)) {
+    return {
+      success: false,
+      message: '请输入取消理由'
+    }
+  }
+
+  const finalCancelReason = isOperatorCancelingOwnOrder ? trimmedReason : DEFAULT_CANCEL_REASON
+  const auditData = {
+    cancel_reason: finalCancelReason,
+    cancelled_at: db.serverDate(),
+    cancel_operator_phone: cancelOperatorPhone
+  }
+  const buildCourtOrderQuery = (court_id) => {
+    return {
+      court_id,
+      campus: orderData.campus
+    }
+  }
+
   const managerCheck = await db.collection('manager').where({
-    phoneNumber: phoneNumber
+    phoneNumber: orderPhoneNumber
   }).get()
 
   const isManager = managerCheck.data && managerCheck.data.length > 0
 
   if (isManager) {
-    // 如果是管理员，直接删除court_order_collection中的记录
-    for (const court_id of court_ids) {
+    if (cancelOperatorPhone !== orderPhoneNumber) {
+      return {
+        success: false,
+        message: '只能取消自己的管理员订场订单'
+      }
+    }
+
+    for (const court_id of courtIds) {
       await db.collection('court_order_collection')
-        .where({
-          court_id: court_id
-        })
+        .where(buildCourtOrderQuery(court_id))
         .remove()
     }
-    
-    // 更新订单状态为CANCEL
+
     await db.collection('pay_order').doc(_id).update({
       data: {
-        status: 'CANCEL'
+        status: 'CANCEL',
+        ...auditData
       }
     })
   } else {
-    // 如果不是管理员，使用原有逻辑
-    // 如果订单状态是PENDING，则更新为CANCEL
-    if (orderResult.data.status === 'PENDING') {
-      // 检查普通用户是否只能取消自己的锁定订单
-      for (const court_id of court_ids) {
+    if (orderData.status === 'PENDING') {
+      for (const court_id of courtIds) {
         const courtOrder = await db.collection('court_order_collection')
           .where({
-            court_id: court_id,
+            ...buildCourtOrderQuery(court_id),
             status: 'locked'
           })
           .get()
-        
-        // 检查是否存在锁定订单，且是否为当前用户创建的
+
         if (courtOrder.data.length > 0) {
           const lockedOrder = courtOrder.data[0]
-          if (lockedOrder.booked_by !== phoneNumber) {
+          if (lockedOrder.booked_by !== orderPhoneNumber) {
             return {
               success: false,
               message: '只能取消自己的预订'
@@ -70,20 +111,20 @@ exports.main = async (event, ) => {
           }
         }
       }
-      
+
       await db.collection('pay_order').doc(_id).update({
         data: {
-          status: 'CANCEL'
+          status: 'CANCEL',
+          ...auditData
         }
       })
 
-      // 删除court_order_collection中匹配的记录
-      for (const court_id of court_ids) {
+      for (const court_id of courtIds) {
         await db.collection('court_order_collection')
           .where({
-            court_id: court_id,
+            ...buildCourtOrderQuery(court_id),
             status: 'locked',
-            booked_by: phoneNumber // 确保只能删除自己的锁定订单
+            booked_by: orderPhoneNumber
           })
           .remove()
       }
@@ -96,8 +137,9 @@ exports.main = async (event, ) => {
   }
 
   return {
+    success: true,
     _id,
-    court_ids,
+    court_ids: courtIds,
     status: 'CANCEL'
   }
 }

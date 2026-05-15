@@ -49,3 +49,22 @@
   </view>
   <view wx:if="{{!hasMore}}" class="no-more">没有更多数据了</view>
 </view>
+
+<view class="cancel-reason-overlay" wx:if="{{showCancelReasonModal}}" bindtap="onCloseCancelReasonModal">
+  <view class="cancel-reason-modal" catchtap="onCancelReasonModalContentClick">
+    <view class="cancel-reason-title">取消订单</view>
+    <view class="cancel-reason-desc">请输入取消理由</view>
+    <textarea
+      class="cancel-reason-input"
+      placeholder="请输入取消理由"
+      value="{{cancelReason}}"
+      maxlength="200"
+      bindinput="onCancelReasonInput"
+      focus="{{showCancelReasonModal}}"
+    />
+    <view class="cancel-reason-actions">
+      <button class="cancel-reason-btn cancel-reason-btn-secondary" bindtap="onCloseCancelReasonModal" disabled="{{canceling}}">取消</button>
+      <button class="cancel-reason-btn cancel-reason-btn-primary" bindtap="onConfirmCancelWithReason" loading="{{canceling}}">确认取消</button>
+    </view>
+  </view>
+</view>

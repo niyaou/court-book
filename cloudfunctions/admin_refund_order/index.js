@@ -55,6 +55,7 @@ exports.main = async (event) => {
 
   const db = cloud.database()
   const { total_fee, _id, nonceStr, phoneNumber, adminPassword } = event
+  const cancelReason = '管理员主动退款'
   
   // 验证必要参数
   if (!phoneNumber) {
@@ -157,7 +158,10 @@ exports.main = async (event) => {
         adminRefundTime: db.serverDate(),
         outRefundNo: outRefundNo,
         refundStatus: 'PROCESSING',
-        adminPhoneNumber: phoneNumber // 记录执行退款的管理员手机号
+        adminPhoneNumber: phoneNumber, // 记录执行退款的管理员手机号
+        cancel_reason: cancelReason,
+        cancelled_at: db.serverDate(),
+        cancel_operator_phone: phoneNumber
       }
     });
     console.log('管理员退款申请成功');
@@ -173,4 +177,4 @@ exports.main = async (event) => {
     }
   }
 
-} 
+}

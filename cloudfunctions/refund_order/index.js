@@ -20,6 +20,7 @@ exports.main = async (event) => {
 
   const db = cloud.database()
   const {   total_fee, _id ,  nonceStr } = event
+  const cancelOperatorPhone = event.operatorPhoneNumber || event.phoneNumber
   const outRefundNo = generateOrderNo(event)
   console.log('生成的退款单号:', outRefundNo);
 
@@ -136,6 +137,18 @@ exports.main = async (event) => {
         message: '退款申请失败：' + refundRes.errCodeDes
       }
     }
+    try {
+      await db.collection('pay_order').doc(_id).update({
+        data: {
+          cancel_reason: '客户退款取消',
+          cancelled_at: db.serverDate(),
+          cancel_operator_phone: cancelOperatorPhone || order.phoneNumber
+        }
+      });
+    } catch (auditError) {
+      console.error('记录退款取消审计信息失败:', auditError);
+    }
+
     console.log('退款申请成功');
     return {
       success: true,

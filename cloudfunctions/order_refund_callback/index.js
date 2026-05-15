@@ -23,16 +23,33 @@ exports.main = async (event) => {
   }
   const order = orderRes.data[0];
   // 更新 pay_order 的 status 字段为 'PAIDED'
-  const updateOrderRes = await db.collection('pay_order').where({ outTradeNo }).update({ data: { status: 'REFUNDED' ,refundStatus:'SUCCESS'} });
+  const updateData = { status: 'REFUNDED', refundStatus: 'SUCCESS' };
+  if (!order.cancelled_at) {
+    updateData.cancelled_at = db.serverDate();
+  }
+  if (!order.cancel_reason) {
+    updateData.cancel_reason = order.adminPhoneNumber ? '管理员主动退款' : '客户退款取消';
+  }
+  if (!order.cancel_operator_phone) {
+    updateData.cancel_operator_phone = order.adminPhoneNumber || order.phoneNumber;
+  }
+  const updateOrderRes = await db.collection('pay_order').where({ outTradeNo }).update({ data: updateData });
   console.log('pay_order 状态更新结果:', updateOrderRes);
   const court_ids = order.court_ids;
   console.log('court_ids:', court_ids);
   // 批量更新 court_order_collection，把 court_id 在 court_ids 里的 删除
   if (court_ids && court_ids.length > 0) {
-    const updateCourtRes = await db.collection('court_order_collection')
-      .where({ court_id: db.command.in(court_ids) })
-      .remove();
-    console.log('court_order_collection 更新结果:', updateCourtRes);
+    if (!order.campus) {
+      console.error('订单缺少 campus，跳过释放场地:', outTradeNo);
+    } else {
+      const updateCourtRes = await db.collection('court_order_collection')
+        .where({
+          court_id: db.command.in(court_ids),
+          campus: order.campus
+        })
+        .remove();
+      console.log('court_order_collection 更新结果:', updateCourtRes);
+    }
   }
   return  { "errcode": 0  };
 }
