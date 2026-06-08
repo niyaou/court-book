@@ -3,6 +3,12 @@
         "openapi": [
 
         ]
-    }
+    },
+    "triggers": [
+        {
+            "name": "court_rush_auto_cancel_every_3_minutes",
+            "type": "timer",
+            "config": "0 */3 * * * * *"
+        }
+    ]
 }
-

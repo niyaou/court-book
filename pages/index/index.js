@@ -122,36 +122,17 @@ Page({
       return
     }
 
-    // 调用权限检查云函数
-    wx.cloud.callFunction({
-      name: 'special_manager_check',
-      data: {
-        phoneNumber: phoneNumber
-      },
-      success: res => {
-        if (res.result && res.result.success) {
-          if (res.result.result === 1) {
-            // 权限验证通过，跳转页面
-            wx.navigateTo({
-              url: '/pages/orderDisplay/orderDisplay'
-            })
-          } else {
-            // 权限不足，不做任何响应
-            console.log('权限不足，无法访问')
-          }
-        } else {
-          console.error('权限检查失败:', res.result.error)
-        }
-      },
-      fail: err => {
-        console.error('调用权限检查云函数失败:', err)
-      },
-      complete: () => {
-        // 立即重置防抖状态，允许下次点击
-        this.setData({
-          isClicking: false
-        })
-      }
+    const specialManagerList = app.globalData.specialManagerList || []
+    if (specialManagerList.includes(phoneNumber)) {
+      wx.navigateTo({
+        url: '/pages/orderDisplay/orderDisplay'
+      })
+    } else {
+      console.log('权限不足，无法访问')
+    }
+
+    this.setData({
+      isClicking: false
     })
   },
 

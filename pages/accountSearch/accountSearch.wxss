@@ -1,0 +1,146 @@
+.container {
+  min-height: 100vh;
+  padding: 20rpx;
+  background-color: #f5f5f5;
+  box-sizing: border-box;
+}
+
+.search-panel {
+  background-color: #fff;
+  border-radius: 10rpx;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+}
+
+.input-row {
+  display: flex;
+  align-items: center;
+  min-height: 88rpx;
+  border-bottom: 1rpx solid #eee;
+}
+
+.input-row:last-of-type {
+  border-bottom: none;
+}
+
+.input-label {
+  width: 96rpx;
+  flex-shrink: 0;
+  font-size: 28rpx;
+  color: #666;
+}
+
+.search-input {
+  flex: 1;
+  height: 72rpx;
+  font-size: 28rpx;
+  color: #333;
+}
+
+.action-row {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 24rpx;
+}
+
+.primary-btn,
+.secondary-btn {
+  flex: 1;
+  height: 76rpx;
+  line-height: 76rpx;
+  font-size: 28rpx;
+  border-radius: 8rpx;
+  margin: 0;
+}
+
+.primary-btn {
+  background-color: #1296db;
+  color: #fff;
+}
+
+.secondary-btn {
+  background-color: #eef2f5;
+  color: #333;
+}
+
+.primary-btn::after,
+.secondary-btn::after {
+  border: none;
+}
+
+.state-panel {
+  background-color: #fff;
+  border-radius: 10rpx;
+  padding: 48rpx 24rpx;
+  text-align: center;
+  color: #999;
+  font-size: 28rpx;
+}
+
+.state-panel.error {
+  color: #d93025;
+}
+
+.result-summary {
+  color: #666;
+  font-size: 26rpx;
+  padding: 0 4rpx 16rpx;
+}
+
+.account-card {
+  background-color: #fff;
+  border-radius: 10rpx;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+}
+
+.account-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20rpx;
+  padding-bottom: 16rpx;
+  border-bottom: 1rpx solid #eee;
+}
+
+.account-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333;
+  word-break: break-all;
+}
+
+.account-subtitle {
+  flex-shrink: 0;
+  font-size: 26rpx;
+  color: #1296db;
+}
+
+.field-list {
+  padding-top: 8rpx;
+}
+
+.field-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 24rpx;
+  padding: 14rpx 0;
+}
+
+.field-label {
+  width: 180rpx;
+  flex-shrink: 0;
+  font-size: 26rpx;
+  color: #666;
+}
+
+.field-value {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+  font-size: 26rpx;
+  color: #333;
+  word-break: break-all;
+}

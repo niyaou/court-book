@@ -8,6 +8,7 @@ App({
     managerList: [],
     specialManagerList: [],
     courtRushManagerList: [],
+    accountManagerList: [],
     eventBus: {
       listeners: {},
       on(event, callback) {
@@ -26,6 +27,20 @@ App({
         }
       }
     }
+  },
+
+  applyManagerPermissions(permissions) {
+    const normalized = {
+      managerList: Array.isArray(permissions && permissions.managerList) ? permissions.managerList : [],
+      specialManagerList: Array.isArray(permissions && permissions.specialManagerList) ? permissions.specialManagerList : [],
+      courtRushManagerList: Array.isArray(permissions && permissions.courtRushManagerList) ? permissions.courtRushManagerList : [],
+      accountManagerList: Array.isArray(permissions && permissions.accountManagerList) ? permissions.accountManagerList : []
+    }
+    this.globalData.managerList = normalized.managerList
+    this.globalData.specialManagerList = normalized.specialManagerList
+    this.globalData.courtRushManagerList = normalized.courtRushManagerList
+    this.globalData.accountManagerList = normalized.accountManagerList
+    return normalized
   },
 
   onLaunch() {
@@ -70,57 +85,25 @@ App({
       })
     }
 
-    const managerList = wx.getStorageSync('managerList')
-    if (managerList) {
-      this.globalData.managerList = managerList
-      console.log('从本地存储加载管理员列表:', managerList)
+    const storedManagerPermissions = wx.getStorageSync('managerPermissions')
+    if (storedManagerPermissions) {
+      const cachedPermissions = this.applyManagerPermissions(storedManagerPermissions)
+      console.log('从本地存储加载管理员权限:', cachedPermissions)
     }
     wx.cloud.callFunction({
-      name: 'manager_list',
+      name: 'manager_permissions',
       success: (res) => {
-        const newManagerList = res.result || []
-        wx.setStorageSync('managerList', newManagerList)
-        this.globalData.managerList = newManagerList
-        console.log('获取并保存管理员列表:', newManagerList)
+        if (!res.result || res.result.success === false) {
+          console.error('获取管理员权限失败：', res.result && res.result.error)
+          return
+        }
+        const managerPermissions = this.applyManagerPermissions(res.result || {})
+        wx.setStorageSync('managerPermissions', managerPermissions)
+        this.globalData.eventBus.emit('managerPermissionsUpdated', managerPermissions)
+        console.log('获取并保存管理员权限:', managerPermissions)
       },
       fail: (err) => {
-        console.error('获取管理员列表失败：', err)
-      }
-    })
-
-    const specialManagerList = wx.getStorageSync('specialManagerList')
-    if (specialManagerList) {
-      this.globalData.specialManagerList = specialManagerList
-      console.log('从本地存储加载特殊管理员列表:', specialManagerList)
-    }
-    wx.cloud.callFunction({
-      name: 'special_manager',
-      success: (res) => {
-        const newSpecialManagerList = res.result || []
-        wx.setStorageSync('specialManagerList', newSpecialManagerList)
-        this.globalData.specialManagerList = newSpecialManagerList
-        console.log('获取并保存特殊管理员列表:', newSpecialManagerList)
-      },
-      fail: (err) => {
-        console.error('获取特殊管理员列表失败：', err)
-      }
-    })
-
-    const courtRushManagerList = wx.getStorageSync('courtRushManagerList')
-    if (courtRushManagerList) {
-      this.globalData.courtRushManagerList = courtRushManagerList
-      console.log('从本地存储加载畅打管理员列表:', courtRushManagerList)
-    }
-    wx.cloud.callFunction({
-      name: 'court_rush_manager',
-      success: (res) => {
-        const newCourtRushManagerList = res.result || []
-        wx.setStorageSync('courtRushManagerList', newCourtRushManagerList)
-        this.globalData.courtRushManagerList = newCourtRushManagerList
-        console.log('获取并保存畅打管理员列表:', newCourtRushManagerList)
-      },
-      fail: (err) => {
-        console.error('获取畅打管理员列表失败：', err)
+        console.error('获取管理员权限失败：', err)
       }
     })
   }

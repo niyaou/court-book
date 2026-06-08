@@ -2,6 +2,23 @@ const cloud = require('wx-server-sdk');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
+const FOUR_PERSON_RUSH_SIZE = 4;
+const MIN_PAID_PARTICIPANTS = 2;
+
+function shouldAutoCancel(rush) {
+  const activeParticipants = Number(rush.current_participants || 0) + Number(rush.held_participants || 0);
+  return Number(rush.max_participants || 0) === FOUR_PERSON_RUSH_SIZE
+    && activeParticipants < MIN_PAID_PARTICIPANTS;
+}
+
+function isUpcomingRush(rush, now, thresholdTime) {
+  const startAt = new Date(rush.start_at).getTime();
+  return rush.status === 'OPEN'
+    && !rush.deleted_at
+    && startAt > now.getTime()
+    && startAt <= thresholdTime.getTime();
+}
+
 function generateNonce() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let result = '';
@@ -106,9 +123,22 @@ async function finalizeAutoCancel(db, rush) {
 async function checkAndFinalizeCancel(db, rushId) {
   const rush = await db.collection('court_rush').doc(rushId).get();
   const data = rush.data;
-  if (!data) return;
-  const total = Number(data.current_participants || 0) + Number(data.held_participants || 0);
-  if (total < 2) await finalizeAutoCancel(db, data);
+  if (!data || data.deleted_at || data.status !== 'OPEN') return;
+  if (new Date(data.start_at).getTime() > Date.now() && shouldAutoCancel(data)) {
+    await finalizeAutoCancel(db, data);
+    return;
+  }
+
+  await db.collection('court_rush').where({
+    _id: rushId,
+    status: 'OPEN',
+    auto_cancel_status: 'PROCESSING',
+  }).update({
+    data: {
+      auto_cancel_status: 'NOT_STARTED',
+      updated_at: db.serverDate(),
+    },
+  });
 }
 
 exports.main = async (event) => {
@@ -117,23 +147,22 @@ exports.main = async (event) => {
   const thresholdTime = new Date(now.getTime() + 30 * 60 * 1000);
 
   const rushes = await db.collection('court_rush').where({
-    status: db.command.neq('CANCELLED'),
-    deleted_at: db.command.eq(null),
+    start_at: db.command.gt(now).and(db.command.lte(thresholdTime)),
   }).get();
 
-  const filteredRushes = (rushes.data || []).filter((rush) => {
-    const startAt = new Date(rush.start_at);
-    const startAtUTC = startAt.getTime();
-    const nowUTC = now.getTime();
-    const thresholdUTC = thresholdTime.getTime();
-    return (startAtUTC > nowUTC && startAtUTC <= thresholdUTC) || startAtUTC <= nowUTC;
-  });
+  const openRushes = (rushes.data || []).filter((rush) => isUpcomingRush(rush, now, thresholdTime));
+  for (const rush of openRushes) {
+    await processExpiredHeldOrders(db, rush._id, now);
 
-  for (const rush of filteredRushes) {
-    const total = Number(rush.current_participants || 0) + Number(rush.held_participants || 0);
-    if (total < 2) {
+    const latestRes = await db.collection('court_rush').doc(rush._id).get();
+    const latest = latestRes.data;
+    if (latest && isUpcomingRush(latest, now, thresholdTime) && shouldAutoCancel(latest)) {
       const updateRes = await db.collection('court_rush').where({
-        _id: rush._id,
+        _id: latest._id,
+        max_participants: FOUR_PERSON_RUSH_SIZE,
+        current_participants: Number(latest.current_participants || 0),
+        held_participants: Number(latest.held_participants || 0),
+        status: 'OPEN',
         auto_cancel_status: db.command.neq('PROCESSING'),
       }).update({
         data: {
@@ -142,9 +171,8 @@ exports.main = async (event) => {
         },
       });
       if (updateRes.stats && updateRes.stats.updated === 1) {
-        await processExpiredHeldOrders(db, rush._id, now);
+        await checkAndFinalizeCancel(db, latest._id);
       }
-      await checkAndFinalizeCancel(db, rush._id);
     }
   }
 
