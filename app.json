@@ -5,6 +5,7 @@
     "pages/rush/rush",
     "pages/rushDetail/rushDetail",
     "pages/member/member",
+    "pages/accountSearch/accountSearch",
     "pages/myOrder/orderlist",
     "pages/orderDisplay/orderDisplay",
     "pages/chargedList/chargedList",

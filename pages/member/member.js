@@ -29,7 +29,8 @@ Page({
     maskedPhoneNumber: '',
     orders: [],
     memberInfo: null,
-    loading: false
+    loading: false,
+    isAccountManager: false
   },
 
   maskPhoneNumber: function(phoneNumber) {
@@ -104,7 +105,8 @@ Page({
       this.setData({
         phoneNumber,
         maskedPhoneNumber: this.maskPhoneNumber(phoneNumber),
-        needsProfileCompletion: false
+        needsProfileCompletion: false,
+        isAccountManager: this.isCurrentAccountManager(phoneNumber)
       });
       this.getMemberInfo();
       return;
@@ -130,8 +132,17 @@ Page({
       maskedPhoneNumber: '',
       pendingPhoneNumber: '',
       pendingMaskedPhoneNumber: '',
-      needsProfileCompletion: false
+      needsProfileCompletion: false,
+      isAccountManager: false
     });
+  },
+
+  isCurrentAccountManager: function(phoneNumber) {
+    const globalList = Array.isArray(app.globalData.accountManagerList) ? app.globalData.accountManagerList : [];
+    const storedPermissions = wx.getStorageSync('managerPermissions') || {};
+    const storedList = Array.isArray(storedPermissions.accountManagerList) ? storedPermissions.accountManagerList : [];
+    const accountManagerList = globalList.length ? globalList : storedList;
+    return Boolean(phoneNumber && accountManagerList.includes(phoneNumber));
   },
 
   ensureCloudAvatar: async function() {
@@ -160,12 +171,26 @@ Page({
   onLoad: function() {
     this.hydrateUserProfile();
     this.syncLoginViewState();
+    this.managerPermissionsUpdatedHandler = () => {
+      const phoneNumber = wx.getStorageSync('phoneNumber') || this.data.phoneNumber;
+      this.setData({
+        isAccountManager: this.isCurrentAccountManager(phoneNumber)
+      });
+    };
+    app.globalData.eventBus.on('managerPermissionsUpdated', this.managerPermissionsUpdatedHandler);
   },
 
   onShow: function() {
     this.hydrateUserProfile();
     this.syncLoginViewState();
     this.ensureCloudAvatar();
+  },
+
+  onUnload: function() {
+    if (this.managerPermissionsUpdatedHandler) {
+      app.globalData.eventBus.off('managerPermissionsUpdated', this.managerPermissionsUpdatedHandler);
+      this.managerPermissionsUpdatedHandler = null;
+    }
   },
 
   navigateToMyBookings: function() {
@@ -183,6 +208,16 @@ Page({
   navigateToSpendList: function() {
     wx.navigateTo({
       url: '/pages/spendList/spendList'
+    });
+  },
+
+  navigateToAccountSearch: function() {
+    if (!this.data.isAccountManager) {
+      wx.showToast({ title: '仅限账户管理员查看', icon: 'none' });
+      return;
+    }
+    wx.navigateTo({
+      url: '/pages/accountSearch/accountSearch'
     });
   },
 
@@ -348,7 +383,8 @@ Page({
       pendingPhoneNumber: '',
       pendingMaskedPhoneNumber: '',
       pendingProfile: { nickName: '', avatarUrl: '' },
-      needsProfileCompletion: false
+      needsProfileCompletion: false,
+      isAccountManager: this.isCurrentAccountManager(pendingPhoneNumber)
     });
     this.ensureAvatarDisplayUrl(profile);
 

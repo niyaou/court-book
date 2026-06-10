@@ -67,6 +67,10 @@
       <text>消费记录</text>
       <text class="arrow">></text>
     </view>
+    <view class="menu-item" wx:if="{{isAccountManager}}" bindtap="navigateToAccountSearch">
+      <text>账户查询</text>
+      <text class="arrow">></text>
+    </view>
   </view>
 
   <modal

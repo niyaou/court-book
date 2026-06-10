@@ -91,10 +91,11 @@
 | password | string | 否 | 管理员密码，admin_refund_order 校验用 |
 | specialManager | number | 否 | 0 或 1，1 表示特殊管理员（可查全部已支付订单、可退款） |
 | courtRushManager | number | 否 | 0 或 1，1 表示畅打管理员（可发起畅打）；权限低于 specialManager，specialManager=1 时天然具备畅打权限 |
+| accountManager | number | 否 | 0 或 1，1 表示账户管理员（可查询外部会员账户） |
 
 **权限层级**：普通管理员 &lt; courtRushManager=1（畅打） &lt; specialManager=1（退款）。
 
-**使用云函数**：update_court_order、get_court_order、cancel_order、manager_list、special_manager、special_manager_check、admin_refund_order、court_rush_create。
+**使用云函数**：update_court_order、get_court_order、cancel_order、manager_permissions、account_member_search、admin_refund_order、court_rush_create。
 
 ---
 
