@@ -1,5 +1,3 @@
-const app = getApp()
-
 const MEMBER_FIELD_LABELS = [
   { key: 'id', label: 'ID' },
   { key: 'annual_count', label: '年卡次数' },
@@ -32,18 +30,10 @@ Page({
     const operatorPhoneNumber = wx.getStorageSync('phoneNumber') || ''
     this.setData({ operatorPhoneNumber })
 
-    if (!operatorPhoneNumber || !this.isCurrentAccountManager(operatorPhoneNumber)) {
-      wx.showToast({ title: '仅限账户管理员查看', icon: 'none' })
+    if (!operatorPhoneNumber) {
+      wx.showToast({ title: '请先登录', icon: 'none' })
       setTimeout(() => wx.navigateBack(), 1200)
     }
-  },
-
-  isCurrentAccountManager: function(phoneNumber) {
-    const globalList = Array.isArray(app.globalData.accountManagerList) ? app.globalData.accountManagerList : []
-    const storedPermissions = wx.getStorageSync('managerPermissions') || {}
-    const storedList = Array.isArray(storedPermissions.accountManagerList) ? storedPermissions.accountManagerList : []
-    const accountManagerList = globalList.length ? globalList : storedList
-    return Boolean(phoneNumber && accountManagerList.includes(phoneNumber))
   },
 
   onNameInput: function(e) {

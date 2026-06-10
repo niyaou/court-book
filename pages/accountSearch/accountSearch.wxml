@@ -1,4 +1,9 @@
 <view class="container">
+  <view class="page-heading">
+    <text class="page-title">会员账户查询</text>
+    <text class="page-subtitle">姓名或电话至少填写一项</text>
+  </view>
+
   <view class="search-panel">
     <view class="input-row">
       <text class="input-label">姓名</text>
@@ -18,23 +23,23 @@
     <text>查询中...</text>
   </view>
 
-  <view class="state-panel error" wx:elif="{{errorMessage}}">
+  <view class="state-panel error" wx:if="{{!loading && errorMessage}}">
     <text>{{errorMessage}}</text>
   </view>
 
-  <view class="state-panel" wx:elif="{{searched && empty}}">
+  <view class="state-panel" wx:if="{{!loading && !errorMessage && searched && empty}}">
     <text>未找到满足条件的会员账户</text>
   </view>
 
-  <view class="result-list" wx:elif="{{resultList.length}}">
+  <view class="result-list" wx:if="{{!loading && !errorMessage && resultList.length > 0}}">
     <view class="result-summary">共 {{resultList.length}} 条结果</view>
-    <view class="account-card" wx:for="{{resultList}}" wx:key="id">
+    <view class="account-card" wx:for="{{resultList}}" wx:for-item="account" wx:key="id">
       <view class="account-header">
-        <text class="account-title">{{item.title}}</text>
-        <text class="account-subtitle">{{item.subtitle}}</text>
+        <text class="account-title">{{account.title}}</text>
+        <text class="account-subtitle">{{account.subtitle}}</text>
       </view>
       <view class="field-list">
-        <view class="field-row" wx:for="{{item.fields}}" wx:for-item="field" wx:key="key">
+        <view class="field-row" wx:for="{{account.fields}}" wx:for-item="field" wx:key="key">
           <text class="field-label">{{field.label}}</text>
           <text class="field-value">{{field.value}}</text>
         </view>

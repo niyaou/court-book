@@ -61,10 +61,14 @@ function hasCompleteDbConfig(dbConfig) {
   return Boolean(dbConfig.host && dbConfig.user && dbConfig.password && dbConfig.database)
 }
 
+function hasAccountManagerPermission(manager) {
+  return Boolean(manager && Number(manager.accountManager) === 1)
+}
+
 async function isAccountManager(db, phoneNumber) {
   const managerRes = await db.collection('manager').where({ phoneNumber }).limit(1).get()
   const manager = managerRes.data && managerRes.data[0]
-  return Boolean(manager && manager.accountManager === 1)
+  return hasAccountManagerPermission(manager)
 }
 
 // 云函数入口函数
@@ -150,5 +154,6 @@ exports.main = async (event) => {
 exports._test = {
   MEMBER_FIELDS,
   buildSearchSql,
-  hasCompleteDbConfig
+  hasCompleteDbConfig,
+  hasAccountManagerPermission
 }

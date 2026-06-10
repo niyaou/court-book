@@ -5,6 +5,27 @@
   box-sizing: border-box;
 }
 
+.page-heading {
+  padding: 12rpx 4rpx 24rpx;
+}
+
+.page-title,
+.page-subtitle {
+  display: block;
+}
+
+.page-title {
+  font-size: 34rpx;
+  font-weight: 600;
+  color: #222;
+}
+
+.page-subtitle {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: #777;
+}
+
 .search-panel {
   background-color: #fff;
   border-radius: 10rpx;
@@ -39,7 +60,6 @@
 
 .action-row {
   display: flex;
-  gap: 20rpx;
   margin-top: 24rpx;
 }
 
@@ -61,6 +81,7 @@
 .secondary-btn {
   background-color: #eef2f5;
   color: #333;
+  margin-right: 20rpx;
 }
 
 .primary-btn::after,
@@ -98,7 +119,6 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 20rpx;
   padding-bottom: 16rpx;
   border-bottom: 1rpx solid #eee;
 }
@@ -114,6 +134,7 @@
 
 .account-subtitle {
   flex-shrink: 0;
+  margin-left: 20rpx;
   font-size: 26rpx;
   color: #1296db;
 }
@@ -125,7 +146,6 @@
 .field-row {
   display: flex;
   justify-content: space-between;
-  gap: 24rpx;
   padding: 14rpx 0;
 }
 
@@ -139,6 +159,7 @@
 .field-value {
   flex: 1;
   min-width: 0;
+  margin-left: 24rpx;
   text-align: right;
   font-size: 26rpx;
   color: #333;
