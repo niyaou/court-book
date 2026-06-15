@@ -1,0 +1,4 @@
+interface:
+  display_name: "Commit Diff Guard"
+  short_description: "Review commit diffs for debug leakage"
+  default_prompt: "Use $commit-diff-guard to review the current diff for hardcoded test data, debug-only code, and risky temporary overrides before commit."
