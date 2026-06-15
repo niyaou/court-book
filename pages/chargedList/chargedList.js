@@ -13,7 +13,6 @@ Page({
 
   onLoad: function() {
     const phoneNumber = wx.getStorageSync('phoneNumber');
-    //  const phoneNumber = "18708162730"
     if (phoneNumber) {
       this.setData({ phoneNumber });
       this.loadChargedList(1);
