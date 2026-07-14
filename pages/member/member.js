@@ -30,7 +30,10 @@ Page({
     orders: [],
     memberInfo: null,
     loading: false,
-    isAccountManager: false
+    isAccountManager: false,
+    isCoach: false,
+    coachContextResolved: false,
+    coachEntryLoading: false
   },
 
   maskPhoneNumber: function(phoneNumber) {
@@ -178,18 +181,32 @@ Page({
       });
     };
     app.globalData.eventBus.on('managerPermissionsUpdated', this.managerPermissionsUpdatedHandler);
+    this.coachContextUpdatedHandler = (context) => {
+      this.setData({
+        isCoach: Boolean(context && context.isCoach),
+        coachContextResolved: Boolean(context && context.resolved)
+      });
+    };
+    app.globalData.eventBus.on('coachContextUpdated', this.coachContextUpdatedHandler);
+    this.coachContextUpdatedHandler(app.globalData.coachContext);
   },
 
   onShow: function() {
     this.hydrateUserProfile();
     this.syncLoginViewState();
     this.ensureCloudAvatar();
+    const phoneNumber = wx.getStorageSync('phoneNumber') || this.data.phoneNumber;
+    if (phoneNumber) app.ensureCoachContext(phoneNumber);
   },
 
   onUnload: function() {
     if (this.managerPermissionsUpdatedHandler) {
       app.globalData.eventBus.off('managerPermissionsUpdated', this.managerPermissionsUpdatedHandler);
       this.managerPermissionsUpdatedHandler = null;
+    }
+    if (this.coachContextUpdatedHandler) {
+      app.globalData.eventBus.off('coachContextUpdated', this.coachContextUpdatedHandler);
+      this.coachContextUpdatedHandler = null;
     }
   },
 
@@ -219,6 +236,29 @@ Page({
     wx.navigateTo({
       url: '/pages/accountSearch/accountSearch'
     });
+  },
+
+  navigateToCoachCourse: async function() {
+    if (!this.data.isCoach || this.coachEntryLoading) return;
+
+    const phoneNumber = wx.getStorageSync('phoneNumber') || this.data.phoneNumber;
+    this.coachEntryLoading = true;
+    this.setData({ coachEntryLoading: true });
+
+    try {
+      const context = await app.ensureCoachContext(phoneNumber, true);
+      if (!context || !context.isCoach) {
+        wx.showToast({ title: '教练权限已失效', icon: 'none' });
+        return;
+      }
+      wx.navigateTo({ url: '/pages/coachCourse/coachCourse' });
+    } catch (error) {
+      console.error('重新校验教练权限失败:', error);
+      wx.showToast({ title: '教练权限校验失败', icon: 'none' });
+    } finally {
+      this.coachEntryLoading = false;
+      this.setData({ coachEntryLoading: false });
+    }
   },
 
   navigateToPoints: function() {
@@ -393,6 +433,7 @@ Page({
     wx.setStorageSync('userInfo', profile);
     app.globalData.userProfile = profile;
     app.globalData.userInfo = profile;
+    app.ensureCoachContext(pendingPhoneNumber, true);
 
     wx.showToast({ title: '登录成功', icon: 'success' });
     this.getMemberInfo();

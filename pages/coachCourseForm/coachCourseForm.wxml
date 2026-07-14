@@ -1,0 +1,34 @@
+<view class="container">
+  <view class="form-card">
+    <view class="field"><text class="label">教练</text><text class="static-value">{{coach.name || ''}}</text></view>
+    <view class="field"><text class="label">课程日期</text><picker mode="date" value="{{date}}" bindchange="onDateChange"><view class="picker-value">{{date}} ›</view></picker></view>
+    <view class="field"><text class="label">开始时间</text><picker range="{{timeOptions}}" value="{{startIndex}}" bindchange="onStartChange"><view class="picker-value">{{startTime || '请选择'}} ›</view></picker></view>
+    <view class="field"><text class="label">结束时间</text><picker range="{{endOptions}}" value="{{endIndex}}" disabled="{{!startTime}}" bindchange="onEndChange"><view class="picker-value">{{endTime || '请选择'}} ›</view></picker></view>
+    <view class="field"><text class="label">课程时长</text><text class="static-value">{{duration === null ? '自动计算' : duration + ' 小时'}}</text></view>
+    <view class="field"><text class="label">课程类型</text><picker range="{{courseTypes}}" range-key="label" value="{{courseTypeIndex}}" disabled="{{!duration}}" bindchange="onCourseTypeChange"><view class="picker-value">{{courseTypeIndex < 0 ? '请选择' : courseTypes[courseTypeIndex].label}} ›</view></picker></view>
+    <view class="field adult-field" wx:if="{{courseType !== null && courseType !== 0}}"><text class="label">成人/儿童</text><radio-group bindchange="onAdultChange"><label><radio value="1" checked="{{isAdult === 1}}"/>成人</label><label><radio value="0" checked="{{isAdult === 0}}"/>儿童</label></radio-group></view>
+    <view class="field"><text class="label">校区</text><picker range="{{courts}}" range-key="name" value="{{courtIndex}}" disabled="{{courseType === null || (courseType !== 0 && isAdult === null)}}" bindchange="onCourtChange"><view class="picker-value">{{courtIndex < 0 ? '请选择' : courts[courtIndex].name}} ›</view></picker></view>
+  </view>
+
+  <view class="form-card" wx:if="{{courseType !== null && courseType >= 0}}">
+    <view class="section-title">会员与消费信息</view>
+    <view wx:if="{{courtId}}">
+    <view class="member-editor" wx:for="{{members}}" wx:key="memberId" wx:for-index="index">
+      <view class="member-header"><text>{{item.memberName}}</text><text class="remove" data-index="{{index}}" bindtap="removeMember">移除</text></view>
+      <picker range="{{deductionTypes}}" range-key="label" value="{{item.deductionType === 'charge' ? 0 : (item.deductionType === 'times' ? 1 : (item.deductionType === 'annual_times' ? 2 : -1))}}" data-index="{{index}}" bindchange="onDeductionChange"><view class="member-picker">扣费方式：{{item.deductionType === 'charge' ? '课时费' : (item.deductionType === 'times' ? '次卡' : (item.deductionType === 'annual_times' ? '年卡' : '请选择'))}} ›</view></picker>
+      <view class="input-row" wx:if="{{item.deductionType === 'charge'}}"><text>课时费</text><input type="digit" placeholder="0.0" data-index="{{index}}" data-field="charge" value="{{item.charge}}" bindinput="onMemberInput"/><text>元</text></view>
+      <view class="input-row" wx:if="{{item.deductionType === 'times'}}"><text>扣次</text><input type="digit" placeholder="0.0" data-index="{{index}}" data-field="times" value="{{item.times}}" bindinput="onMemberInput"/><text>次</text></view>
+      <view class="input-row" wx:if="{{item.deductionType === 'annual_times'}}"><text>扣年卡</text><input type="digit" placeholder="0.0" data-index="{{index}}" data-field="annualTimes" value="{{item.annualTimes}}" bindinput="onMemberInput"/><text>次</text></view>
+      <view class="input-row" wx:if="{{item.deductionType === 'times' || item.deductionType === 'annual_times'}}"><text>折算金额</text><input type="digit" placeholder="0.0" data-index="{{index}}" data-field="description" value="{{item.description}}" bindinput="onMemberInput"/><text>元</text></view>
+      <view class="input-row"><text>数量</text><input type="number" data-index="{{index}}" data-field="quantities" value="{{item.quantities}}" bindinput="onMemberInput"/><text>人</text></view>
+      <view class="debt-tip" wx:if="{{item.deductionType && item.isDebt}}">该会员当前或本次扣费后可能欠费，不影响提交。</view>
+    </view>
+    <view class="search-box" wx:if="{{canSearchMember}}"><input placeholder="输入会员姓名搜索" value="{{memberKeyword}}" bindinput="onMemberKeyword"/><view class="search-loading" wx:if="{{memberSearchLoading}}">搜索中...</view><view class="search-result" wx:for="{{memberResults}}" wx:key="id" data-id="{{item.id}}" bindtap="chooseMember">{{item.name}}</view></view>
+    <view class="search-disabled" wx:else>请先完成当前会员的扣费信息</view>
+    </view>
+    <view class="search-disabled" wx:else>请先选择校区</view>
+  </view>
+
+  <view class="form-card" wx:if="{{courseType !== null}}"><view class="field vertical"><text class="label">备注</text><textarea maxlength="100" placeholder="最多 100 个字符，可不填写" value="{{description}}" bindinput="onDescriptionInput"/></view></view>
+  <button class="submit" loading="{{submitting}}" disabled="{{submitting}}" bindtap="submit">{{mode === 'edit' ? '保存修改' : '提交待审课程'}}</button>
+</view>

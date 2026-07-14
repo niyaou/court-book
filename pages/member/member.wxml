@@ -54,6 +54,15 @@
     </view>
   </view>
 
+  <view class="coach-course-entry" wx:if="{{isCoach}}" bindtap="navigateToCoachCourse">
+    <view>
+      <view class="coach-course-title">录课</view>
+      <view class="coach-course-desc" wx:if="{{!coachEntryLoading}}">填报课程、查看待审课和正式课</view>
+      <view class="coach-course-loading" wx:else><view class="coach-course-spinner"></view><text>权限校验中...</text></view>
+    </view>
+    <text class="arrow" wx:if="{{!coachEntryLoading}}">></text>
+  </view>
+
   <view class="menu-list">
     <view class="menu-item" bindtap="navigateToMyBookings">
       <text>我的预约</text>

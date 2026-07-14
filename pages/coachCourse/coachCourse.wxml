@@ -1,0 +1,50 @@
+<view class="container">
+  <button class="create-button" bindtap="navigateToCreate">+ 新增课程</button>
+  <view class="tabs">
+    <view class="tab {{activeTab === 'pending' ? 'active' : ''}}" data-tab="pending" bindtap="switchTab">待审课</view>
+    <view class="tab {{activeTab === 'formal' ? 'active' : ''}}" data-tab="formal" bindtap="switchTab">正式课</view>
+  </view>
+
+  <view wx:if="{{activeTab === 'pending'}}">
+    <view class="loading" wx:if="{{pendingLoading && !pendingLoaded}}">加载中...</view>
+    <view class="empty" wx:elif="{{pendingLoaded && pendingList.length === 0}}">暂无待审课程</view>
+    <block wx:else>
+      <view class="course-card" wx:for="{{pendingList}}" wx:key="id">
+        <view class="card-title"><text>{{item.typeLabel}}</text><text class="status">待审</text></view>
+        <view class="course-row"><text>教练</text><text>{{item.coachName || '当前教练'}}</text></view>
+        <view class="course-row"><text>时间</text><text>{{item.startTime}} - {{item.endTime}}</text></view>
+        <view class="course-row"><text>时长</text><text>{{item.duration}} 小时</text></view>
+        <view class="course-row"><text>校区</text><text>{{item.courtName || '已失效校区'}}</text></view>
+        <view class="course-row" wx:if="{{item.adultLabel}}"><text>类型</text><text>{{item.adultLabel}}</text></view>
+        <view class="course-row" wx:if="{{item.description}}"><text>备注</text><text>{{item.description}}</text></view>
+        <view class="member-toggle" data-id="{{item.id}}" bindtap="togglePending">会员消费明细 {{pendingCollapsed[item.id] ? '展开' : '收起'}}</view>
+        <view class="members" wx:if="{{!pendingCollapsed[item.id]}}">
+          <view class="member" wx:for="{{item.membersData}}" wx:for-item="member" wx:key="memberId">
+            <text>{{member.memberName || '已失效会员'}}{{member.memberNumber ? '（' + member.memberNumber + '）' : ''}}</text>
+            <text>课时费 {{member.charge}} / 次卡 {{member.times}} / 年卡 {{member.annualTimes}} / 数量 {{member.quantities}}</text>
+          </view>
+          <view class="empty-member" wx:if="{{item.membersData.length === 0}}">本课程无需填写会员</view>
+        </view>
+        <view class="actions"><button size="mini" data-id="{{item.id}}" bindtap="navigateToEdit">修改</button><button size="mini" class="danger" data-id="{{item.id}}" bindtap="deletePending">删除</button></view>
+      </view>
+    </block>
+  </view>
+
+  <view wx:if="{{activeTab === 'formal'}}">
+    <view class="loading" wx:if="{{formalLoading && !formalLoaded}}">加载中...</view>
+    <view class="empty" wx:elif="{{formalLoaded && formalList.length === 0}}">近三个月暂无正式课程</view>
+    <block wx:else>
+      <view class="course-card" wx:for="{{formalList}}" wx:key="id">
+        <view class="card-title"><text>{{item.typeLabel}}</text><text class="formal-status">正式课</text></view>
+        <view class="course-row"><text>时间</text><text>{{item.startTime}} - {{item.endTime}}</text></view>
+        <view class="course-row"><text>时长</text><text>{{item.duration}} 小时</text></view>
+        <view class="course-row"><text>校区</text><text>{{item.courtName || '已失效校区'}}</text></view>
+        <view class="course-row" wx:if="{{item.adultLabel}}"><text>类型</text><text>{{item.adultLabel}}</text></view>
+        <view class="course-row" wx:if="{{item.description}}"><text>备注</text><text>{{item.description}}</text></view>
+        <view class="member-toggle" data-id="{{item.id}}" bindtap="toggleFormal">会员消费明细 {{formalCollapsed[item.id] ? '展开' : '收起'}}</view>
+        <view class="members" wx:if="{{!formalCollapsed[item.id]}}"><view class="member" wx:for="{{item.membersData}}" wx:for-item="member" wx:key="memberId"><text>{{member.memberName || '已失效会员'}}{{member.memberNumber ? '（' + member.memberNumber + '）' : ''}}</text><text>课时费 {{member.charge}} / 次卡 {{member.times}} / 年卡 {{member.annualTimes}} / 数量 {{member.quantities}}</text></view><view class="empty-member" wx:if="{{item.membersData.length === 0}}">本课程无需填写会员</view></view>
+      </view>
+      <view class="pagination" wx:if="{{formalTotalPages > 0}}"><text>第 {{formalPage}} / {{formalTotalPages}} 页，共 {{formalTotal}} 条</text><view class="page-actions"><button size="mini" disabled="{{formalPage <= 1}}" bindtap="previousPage">上一页</button><input type="number" value="{{formalPageInput}}" bindinput="onPageInput" confirm-type="done" bindconfirm="jumpPage"/><button size="mini" bindtap="jumpPage">跳转</button><button size="mini" disabled="{{formalPage >= formalTotalPages}}" bindtap="nextPage">下一页</button></view></view>
+    </block>
+  </view>
+</view>
