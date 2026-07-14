@@ -9,6 +9,13 @@ App({
     specialManagerList: [],
     courtRushManagerList: [],
     accountManagerList: [],
+    coachContext: {
+      resolved: false,
+      isCoach: false,
+      coach: null,
+      courts: []
+    },
+    coachContextPromise: null,
     eventBus: {
       listeners: {},
       on(event, callback) {
@@ -41,6 +48,43 @@ App({
     this.globalData.courtRushManagerList = normalized.courtRushManagerList
     this.globalData.accountManagerList = normalized.accountManagerList
     return normalized
+  },
+
+  ensureCoachContext(phoneNumber, force = false) {
+    const normalizedPhone = String(phoneNumber || '').trim()
+    if (!normalizedPhone) {
+      const context = { resolved: true, isCoach: false, coach: null, courts: [] }
+      this.globalData.coachContext = context
+      this.globalData.eventBus.emit('coachContextUpdated', context)
+      return Promise.resolve(context)
+    }
+
+    if (!force && this.globalData.coachContextPromise) return this.globalData.coachContextPromise
+
+    this.globalData.coachContextPromise = new Promise((resolve) => {
+      wx.cloud.callFunction({
+        name: 'coach_context',
+        data: { phoneNumber: normalizedPhone },
+        success: (res) => {
+          const result = res && res.result
+          const data = result && result.data
+          const context = result && result.success && result.isCoach && data
+            ? { resolved: true, isCoach: true, coach: data.coach, courts: data.courts || [] }
+            : { resolved: true, isCoach: false, coach: null, courts: [] }
+          this.globalData.coachContext = context
+          this.globalData.eventBus.emit('coachContextUpdated', context)
+          resolve(context)
+        },
+        fail: (error) => {
+          console.error('初始化教练身份失败:', error)
+          const context = { resolved: true, isCoach: false, coach: null, courts: [] }
+          this.globalData.coachContext = context
+          this.globalData.eventBus.emit('coachContextUpdated', context)
+          resolve(context)
+        }
+      })
+    })
+    return this.globalData.coachContextPromise
   },
 
   onLaunch() {
@@ -84,6 +128,9 @@ App({
         }
       })
     }
+
+    const storedPhoneNumber = wx.getStorageSync('phoneNumber')
+    if (storedPhoneNumber) this.ensureCoachContext(storedPhoneNumber)
 
     const storedManagerPermissions = wx.getStorageSync('managerPermissions')
     if (storedManagerPermissions) {

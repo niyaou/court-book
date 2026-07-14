@@ -208,6 +208,25 @@
   padding: 20rpx;
 }
 
+.coach-course-entry {
+  background: linear-gradient(135deg, #1296db, #4cb8ee);
+  border-radius: 10rpx;
+  padding: 26rpx 30rpx;
+  margin-bottom: 20rpx;
+  color: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.coach-course-title { font-size: 32rpx; font-weight: 600; }
+.coach-course-desc { font-size: 24rpx; opacity: .9; margin-top: 8rpx; }
+.coach-course-loading { display: flex; align-items: center; gap: 10rpx; margin-top: 8rpx; font-size: 24rpx; opacity: .9; }
+.coach-course-spinner { width: 20rpx; height: 20rpx; border: 3rpx solid rgba(255, 255, 255, .45); border-top-color: #fff; border-radius: 50%; animation: coach-course-spin .8s linear infinite; }
+.coach-course-entry .arrow { color: #fff; font-size: 34rpx; }
+
+@keyframes coach-course-spin { to { transform: rotate(360deg); } }
+
 .menu-item {
   display: flex;
   justify-content: space-between;
