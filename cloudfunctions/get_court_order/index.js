@@ -25,7 +25,7 @@ function generateTimeSlots(start, end, interval) {
   return slots
 }
 
-function getPrice(court, slot, campus) {
+function getPrice(court, campus, lightingFeeYuan) {
   // 根据校区配置不同的价格
   const court_price_mapping = {
     "麓坊校区": {
@@ -55,10 +55,24 @@ function getPrice(court, slot, campus) {
   const campusPrices = court_price_mapping[campus] || court_price_mapping["麓坊校区"]; // 默认使用麓坊校区价格
   const basePrice = campusPrices[court] || 60; // 默认价格60元
 
-  // 灯光费从18:30开始
-  const [hour, minute] = slot.start.split(':').map(Number)
-  const hasLightFee = hour > 18 || (hour === 18 && minute >= 30)
-  return hasLightFee ? basePrice + 10 : basePrice
+  return Math.round((basePrice + Number(lightingFeeYuan || 0)) * 100) / 100
+}
+
+async function resolveLightingPricing(campus, date, timeSlots) {
+  const response = await cloud.callFunction({
+    name: 'booking_pricing',
+    data: {
+      campus,
+      slots: timeSlots.map((slot) => ({ date, start_time: slot.start })),
+    },
+  })
+  const result = response && response.result
+  if (!result || !result.success || !result.data) {
+    const error = new Error((result && result.message) || '灯光费配置读取失败')
+    error.code = (result && result.error) || 'PRICING_CONFIG_ERROR'
+    throw error
+  }
+  return result.data
 }
 
 // 云函数入口函数
@@ -94,6 +108,21 @@ exports.main = async (event, context) => {
   };
   const { start, end } = campusTimeConfig[campus] || campusTimeConfig['麓坊校区'];
   const timeSlots = generateTimeSlots(start, end, 30);
+  let lightingPricing
+  try {
+    lightingPricing = await resolveLightingPricing(campus, date, timeSlots)
+  } catch (error) {
+    console.error('[get_court_order] 灯光费配置异常', error)
+    return {
+      success: false,
+      error: error.code || 'PRICING_CONFIG_ERROR',
+      message: '灯光费配置异常，请联系管理员'
+    }
+  }
+  const lightingFeeByTime = new Map(
+    lightingPricing.slots.map((slot) => [slot.start_time, slot.lighting_fee_yuan])
+  )
+  const lightingRule = lightingPricing.rules[0]
   // console.log('生成的时间段:', timeSlots)
 
   // 3. 查询预订状态
@@ -244,7 +273,12 @@ exports.main = async (event, context) => {
       if (order) {
         // 移除 _at 字段和其他不必要的字段
         const { created_at, updated_at, _id, ...orderWithoutAt } = order
-        result.push(orderWithoutAt)
+        result.push({
+          ...orderWithoutAt,
+          ...(order.status === 'free' && {
+            price: getPrice(court.courtNumber, court.campus, lightingFeeByTime.get(slot.start))
+          })
+        })
       } else {
         // 构建时间段的具体时间点进行比较（使用本地时区）
         const year = parseInt(date.substring(0, 4))
@@ -281,7 +315,7 @@ exports.main = async (event, context) => {
           start_time: slot.start,
           end_time: slot.end,
           status,
-          price: getPrice(court.courtNumber, slot, court.campus),
+          price: getPrice(court.courtNumber, court.campus, lightingFeeByTime.get(slot.start)),
           isPastTime:isPastTime,
           ...(court_id && { court_id }),
           ...(booked_by && { booked_by })
@@ -329,7 +363,15 @@ exports.main = async (event, context) => {
   console.log('最终返回数据大小:', JSON.stringify(result).length, 'bytes')
   
   // 检查返回数据大小是否超过限制
-  const responseSize = JSON.stringify({ success: true, data: result }).length
+  const pricing = {
+    rule_id: lightingRule.rule_id,
+    effective_from: lightingRule.effective_from,
+    enabled: lightingRule.enabled,
+    lighting_start_time: lightingRule.start_time,
+    fee_per_slot_yuan: lightingRule.fee_per_slot_yuan,
+    notice: lightingRule.notice,
+  }
+  const responseSize = JSON.stringify({ success: true, data: result, pricing }).length
   if (responseSize > 900 * 1024) { // 900KB 作为安全阈值
     console.error('返回数据过大:', responseSize, 'bytes')
     return {
@@ -338,5 +380,5 @@ exports.main = async (event, context) => {
     }
   }
 
-  return { success: true, data: result }
+  return { success: true, data: result, pricing }
 }

@@ -16,6 +16,7 @@ Page({
     isProcessingOrder: false, // 是否正在处理订单（创建订单到付款完成期间）
     showPaymentModal: false, // 控制支付提醒弹窗显示
     paymentModalData: null, // 保存弹窗确认后的回调数据
+    lightingFeeNotice: '', // 由云端按预约日期返回的灯光费提示
     venueImages: [
      'cloud://cloud1-6gebob4m4ba8f3de.636c-cloud1-6gebob4m4ba8f3de-1357716382/mp_asset/微信图片_2025-08-10_213705_306.jpg',
     'cloud://cloud1-6gebob4m4ba8f3de.636c-cloud1-6gebob4m4ba8f3de-1357716382/mp_asset/微信图片_2025-08-10_213716_234.jpg',
@@ -277,9 +278,12 @@ Page({
             courtStatus[order.courtNumber] = times;
           });
 
-          this.setData({ courtStatus });
+          this.setData({
+            courtStatus,
+            lightingFeeNotice: (res.result.pricing && res.result.pricing.notice) || ''
+          });
         } else {
-          wx.showToast({ title: '获取场地状态失败', icon: 'none' });
+          wx.showToast({ title: (res.result && res.result.message) || '获取场地状态失败', icon: 'none' });
           console.error('云函数返回失败:', res.result);
         }
       },
@@ -566,7 +570,10 @@ Page({
           const managerList = app.globalData.managerList || [];
           
           // 更新最后更新时间
-          this.setData({ lastUpdateTime: now });
+          this.setData({
+            lastUpdateTime: now,
+            lightingFeeNotice: (res.result.pricing && res.result.pricing.notice) || ''
+          });
           
           // 先获取所有场地号
           const courtNumbers = [...new Set(res.result.data.map(item => ({courtNumber:item.courtNumber, price:item.price})))];
@@ -954,7 +961,7 @@ Page({
         this.clearSelectedStatus();
         this.initCourtStatusByCloud(this.data.currentDate);
       } else {
-        wx.showToast({ title: (res.result && res.result.error) || '创建失败', icon: 'none' });
+        wx.showToast({ title: (res.result && (res.result.message || res.result.error)) || '创建失败', icon: 'none' });
       }
     } catch (err) {
       wx.hideLoading();
@@ -1076,7 +1083,7 @@ Page({
         } else {
           wx.hideLoading();
           wx.showToast({
-            title: '创建订单失败',
+            title: (res.result && res.result.message) || '创建订单失败',
             icon: 'error'
           });
           // 重置处理订单状态

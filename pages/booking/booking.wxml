@@ -153,7 +153,7 @@
       </view>
       <view class="payment-modal-body">
         <view class="payment-modal-main-text">场地已锁定，请尽快支付</view>
-        <view class="payment-modal-main-text">18:30后每半小时加收10元灯光费</view>
+        <view class="payment-modal-main-text" wx:if="{{lightingFeeNotice}}">{{lightingFeeNotice}}</view>
         <view class="payment-modal-special-note">
           <view class="payment-modal-note-title">特殊说明：</view>
           <view class="payment-modal-note-item">1.一片场地最多服务6人。</view>

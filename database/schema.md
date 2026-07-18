@@ -59,6 +59,9 @@
 | outTradeNo | string | 是 | 商户订单号（微信），pay_order_create 用 MD5 生成 32 位 |
 | phoneNumber | string | 是 | 下单用户手机号 |
 | total_fee | number | 是 | 订单金额（元） |
+| lighting_fee_yuan | number | 否 | 本订单灯光费合计（元） |
+| pricing_rule_ids | array\<string\> | 否 | 计费时使用的规则 ID |
+| lighting_pricing_snapshot | array\<object\> | 否 | 创建支付时使用的灯光费规则快照 |
 | court_ids | array\<string\> | 是 | 本次预订的 court_id 列表，与 court_order_collection.court_id 对应 |
 | campus | string | 是 | 校区，用于重复单校验、列表筛选 |
 | status | string | 是 | PENDING / PAIDED / CANCEL / REFUNDED |
@@ -121,13 +124,38 @@
 
 **使用云函数**：court_rush_detail 按 type=rush 查询一条，将 title、content 随详情返回，用于畅打详情页展示。
 
+### 7. booking_pricing_rules（预约计费规则表）
+
+按预约日期保存追加式计费规则。小程序端禁止直接读写，由 `booking_pricing` 云函数统一解析。
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| _id | string | 是 | 规则版本主键，如 `booking-pricing-20260718` |
+| type | string | 是 | 固定为 `BOOKING_PRICING` |
+| schema_version | number | 是 | 当前为 `1` |
+| status | string | 是 | 已发布规则为 `PUBLISHED` |
+| effective_from | string | 是 | 生效预约日期，格式 `YYYYMMDD` |
+| lighting_fee | object | 是 | 默认灯光费规则 |
+| lighting_fee.enabled | boolean | 是 | 是否收取灯光费 |
+| lighting_fee.start_time | string | 条件必填 | 启用时必填，必须为半点时段，如 `19:30` |
+| lighting_fee.fee_per_slot_yuan | number | 条件必填 | 启用时必填，每30分钟每片金额，最多两位小数 |
+| campus_overrides | array | 否 | 分校区覆盖项，元素为 `{ campus, lighting_fee }` |
+| note | string | 否 | 运营备注 |
+| created_at / updated_at | date | 否 | 审计时间 |
+
+**匹配规则**：选择 `effective_from <= 预约日期` 的最新一条 `PUBLISHED` 记录，再应用对应校区覆盖。换季时新增记录，不修改历史记录。
+
+**索引与权限**：业务上 `(type, effective_from)` 唯一；建立该唯一索引，并为查询建立 `type` 升序 + `status` 升序 + `effective_from` 降序组合索引。集合客户端权限设为不可读、不可写。
+
+**使用云函数**：booking_pricing（读取与解析），get_court_order、pay_order_create、court_rush_create（通过 booking_pricing 使用）。
+
 ---
 
-## 二、畅打模块（Court Rush）— 设计态
+## 二、畅打模块（Court Rush）
 
-以下三表见 `court_rush/database_design.md`，当前由云函数倒推的代码中尚未实现，仅作 schema 预留与联动说明。
+以下三表已经由畅打相关云函数使用，详细设计见 `court_rush/database_design.md`。
 
-### 6. court_rush（畅打主表）
+### 8. court_rush（畅打主表）
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -138,6 +166,10 @@
 | current_participants | number | 已付人数（PAID enrollment 数）；闸门计数 |
 | held_participants | number | 占位数（PENDING_PAYMENT 且未过期）；闸门计数 |
 | price_per_person_yuan | number | 每人报名费（元） |
+| lighting_fee_yuan | number | 四人畅打每人灯光费；双人畅打为 0（固定价已含） |
+| lighting_fee_total_yuan | number | 创建活动时所有时段的场地灯光费合计 |
+| lighting_rule_snapshot | object | 创建活动时使用的灯光费规则快照 |
+| pricing_rule_ids | array\<string\> | 创建活动时使用的规则 ID |
 | status | string | OPEN / FULL / ENDED / CANCELLED |
 | title | string | 活动标题（创建时填写） |
 | created_by | string | 创建者手机号（管理员） |
@@ -146,9 +178,9 @@
 | created_at | date | 创建时间 |
 | updated_at | date | 更新时间 |
 
-创建畅打时需在 court_order_collection 中批量写入 booked，booked_by 为 court_rush._id，source_type 为 `COURT_RUSH`。
+创建畅打时需在 court_order_collection 中批量写入 booked，`booked_by` 为创建者手机号，`rush_id` 为 `court_rush._id`，`source_type` 为 `COURT_RUSH`。
 
-### 7. court_rush_enrollment（畅打报名表）
+### 9. court_rush_enrollment（畅打报名表）
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -164,7 +196,7 @@
 | created_at | date | 创建时间 |
 | updated_at | date | 更新时间 |
 
-### 8. court_rush_payment（畅打报名支付表）
+### 10. court_rush_payment（畅打报名支付表）
 
 与 pay_order 分离，专用于畅打报名费，不走 order_create_callback / order_refund_callback。
 
