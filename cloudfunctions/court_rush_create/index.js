@@ -61,6 +61,23 @@ function ensureContinuousSameCourt(courtInfos) {
   return true;
 }
 
+async function resolveLightingPricing(campus, courtInfos) {
+  const response = await cloud.callFunction({
+    name: 'booking_pricing',
+    data: {
+      campus,
+      slots: courtInfos.map((item) => ({ date: item.date, start_time: item.start_time })),
+    },
+  });
+  const result = response && response.result;
+  if (!result || !result.success || !result.data) {
+    const error = new Error((result && result.message) || '灯光费配置读取失败');
+    error.code = (result && result.error) || 'PRICING_CONFIG_ERROR';
+    throw error;
+  }
+  return result.data;
+}
+
 exports.main = async (event) => {
   const db = cloud.database();
   const _ = db.command;
@@ -95,6 +112,22 @@ exports.main = async (event) => {
   if (!ensureContinuousSameCourt(parsedList)) {
     return { success: false, error: 'NOT_CONTINUOUS', message: 'Court slots must be same court and continuous' };
   }
+
+  let lightingPricing;
+  try {
+    lightingPricing = await resolveLightingPricing(campus, parsedList);
+  } catch (error) {
+    console.error('[court_rush_create] 灯光费配置异常', error);
+    return {
+      success: false,
+      error: error.code || 'PRICING_CONFIG_ERROR',
+      message: '灯光费配置异常，请联系管理员',
+    };
+  }
+
+  const lightingFeeTotalYuan = Number(lightingPricing.total_lighting_fee_yuan || 0);
+  const lighting_fee_yuan = maxP === 2 ? 0 : Math.ceil(lightingFeeTotalYuan / 4);
+  const lightingRuleSnapshot = lightingPricing.rules[0];
 
   const uniqueCourtIds = Array.from(new Set(court_ids));
   const rushId = generateRushId(phoneNumber, uniqueCourtIds);
@@ -164,8 +197,6 @@ exports.main = async (event) => {
   const lastSlot = sortedTimes[sortedTimes.length - 1];
   const endAt = buildDateTime(lastSlot.date, lastSlot.end_time || lastSlot.start_time) || now;
 
-  const lateCount = parsedList.filter((p) => p.start_time >= '18:30').length;
-  const lighting_fee_yuan = maxP === 2 ? 0 : Math.ceil((lateCount * 10) / 4);
   const finalPrice = maxP === 2 ? 100 : Number(price_per_person_yuan);
 
   const rushDoc = {
@@ -177,6 +208,9 @@ exports.main = async (event) => {
     held_participants: 0,
     price_per_person_yuan: finalPrice,
     lighting_fee_yuan,
+    lighting_fee_total_yuan: lightingFeeTotalYuan,
+    lighting_rule_snapshot: lightingRuleSnapshot,
+    pricing_rule_ids: [...new Set(lightingPricing.rules.map((rule) => rule.rule_id))],
     venue_total_fee_yuan: Number(venue_total_fee_yuan || 0),
     total_revenue_yuan: 0,
     status: 'OPEN',
@@ -197,5 +231,7 @@ exports.main = async (event) => {
     rushId,
     court_ids: uniqueCourtIds,
     lighting_fee_yuan,
+    lighting_fee_total_yuan: lightingFeeTotalYuan,
+    lighting_rule_snapshot: lightingRuleSnapshot,
   };
 };

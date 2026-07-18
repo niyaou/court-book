@@ -144,24 +144,43 @@ function getVipBasePrice(court, campus, basePrice, isVip) {
   return basePrice
 }
 
-function hasLightFee(startTime) {
-  const [hour, minute] = String(startTime || '').split(':').map(Number)
-  if (Number.isNaN(hour) || Number.isNaN(minute)) return false
-  return hour > 18 || (hour === 18 && minute >= 30)
+function parseCourtId(courtId) {
+  const parts = String(courtId || '').split('_')
+  if (parts.length < 3) {
+    throw new Error(`INVALID_COURT_ID:${courtId}`)
+  }
+  return {
+    court_id: courtId,
+    court: parts.slice(0, parts.length - 2).join('_'),
+    date: parts[parts.length - 2],
+    start_time: parts[parts.length - 1],
+  }
 }
 
-function calculateTotalFee(court_ids, campus, isVip) {
+async function resolveLightingPricing(campus, courtInfos) {
+  const response = await cloud.callFunction({
+    name: 'booking_pricing',
+    data: {
+      campus,
+      slots: courtInfos.map((item) => ({ date: item.date, start_time: item.start_time })),
+    },
+  })
+  const result = response && response.result
+  if (!result || !result.success || !result.data) {
+    const error = new Error((result && result.message) || '灯光费配置读取失败')
+    error.code = (result && result.error) || 'PRICING_CONFIG_ERROR'
+    throw error
+  }
+  return result.data
+}
+
+function calculateTotalFee(courtInfos, campus, isVip, pricedSlots) {
   let total = 0
-  for (const courtId of court_ids) {
-    const parts = String(courtId || '').split('_')
-    if (parts.length < 3) {
-      throw new Error(`INVALID_COURT_ID:${courtId}`)
-    }
-    const startTime = parts[parts.length - 1]
-    const court = parts.slice(0, parts.length - 2).join('_')
-    const basePrice = getBasePrice(court, campus)
-    const finalBasePrice = getVipBasePrice(court, campus, basePrice, isVip)
-    total += finalBasePrice + (hasLightFee(startTime) ? 10 : 0)
+  for (let index = 0; index < courtInfos.length; index += 1) {
+    const info = courtInfos[index]
+    const basePrice = getBasePrice(info.court, campus)
+    const finalBasePrice = getVipBasePrice(info.court, campus, basePrice, isVip)
+    total += finalBasePrice + Number(pricedSlots[index].lighting_fee_yuan || 0)
   }
   return Math.round(total * 100) / 100
 }
@@ -190,6 +209,17 @@ exports.main = async (event, ) => {
     }
   }
 
+  let courtInfos
+  try {
+    courtInfos = court_ids.map(parseCourtId)
+  } catch (error) {
+    return {
+      success: false,
+      message: '订单数据异常，请重新选择时段',
+      error: 'INVALID_COURT_ID'
+    }
+  }
+
   // 检查重复订单
   const duplicateCheck = await checkDuplicateOrders(db, court_ids, campus);
   if (duplicateCheck.isDuplicate) {
@@ -203,15 +233,21 @@ exports.main = async (event, ) => {
   // 服务端查询会员并重新计算订单金额，不信任前端传入 total_fee
   const vipInfo = await getVipInfo(phoneNumber)
   let total_fee = 0
+  let lightingPricing
   try {
-    total_fee = calculateTotalFee(court_ids, campus, vipInfo.isVip)
+    lightingPricing = await resolveLightingPricing(campus, courtInfos)
+    total_fee = calculateTotalFee(courtInfos, campus, vipInfo.isVip, lightingPricing.slots)
   } catch (error) {
+    console.error('[pay_order_create] 计费失败', error)
+    const isPricingError = error.code && error.code.includes('PRICING_')
     return {
       success: false,
-      message: '订单数据异常，请重新选择时段',
-      error: 'INVALID_COURT_ID'
+      message: isPricingError ? '灯光费配置异常，请联系管理员' : '订单数据异常，请重新选择时段',
+      error: isPricingError ? error.code : 'INVALID_COURT_ID'
     }
   }
+  const lighting_fee_yuan = lightingPricing.total_lighting_fee_yuan
+  const pricing_rule_ids = [...new Set(lightingPricing.rules.map((rule) => rule.rule_id))]
   const outTradeNo = generateOrderNo({ ...event, total_fee })
 
   // 普通定场支付超时时间固定为2分钟
@@ -257,6 +293,9 @@ exports.main = async (event, ) => {
     data: {
       phoneNumber,
       total_fee,
+      lighting_fee_yuan,
+      pricing_rule_ids,
+      lighting_pricing_snapshot: lightingPricing.rules,
       court_ids,
       campus:campus,
       is_vip: vipInfo.isVip,
