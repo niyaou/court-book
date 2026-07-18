@@ -1,0 +1,30 @@
+[
+  {
+    "_id": "booking-pricing-baseline",
+    "type": "BOOKING_PRICING",
+    "schema_version": 1,
+    "status": "PUBLISHED",
+    "effective_from": "19700101",
+    "lighting_fee": {
+      "enabled": true,
+      "start_time": "18:30",
+      "fee_per_slot_yuan": 10
+    },
+    "campus_overrides": [],
+    "note": "历史灯光费基线"
+  },
+  {
+    "_id": "booking-pricing-20260718",
+    "type": "BOOKING_PRICING",
+    "schema_version": 1,
+    "status": "PUBLISHED",
+    "effective_from": "20260718",
+    "lighting_fee": {
+      "enabled": true,
+      "start_time": "19:30",
+      "fee_per_slot_yuan": 10
+    },
+    "campus_overrides": [],
+    "note": "2026夏季灯光费规则"
+  }
+]

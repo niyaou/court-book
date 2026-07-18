@@ -1,0 +1,13 @@
+{
+  "name": "booking_pricing",
+  "version": "1.0.0",
+  "description": "Resolve date-effective booking pricing rules from CloudBase",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test pricing.test.js"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "wx-server-sdk": "~3.0.1"
+  }
+}
