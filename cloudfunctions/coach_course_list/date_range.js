@@ -30,4 +30,13 @@ function rangeForCurrentThreeMonths(now = new Date()) {
   }
 }
 
-module.exports = { BUSINESS_TIME_ZONE, businessYearMonth, rangeForCurrentThreeMonths }
+function rangeForCurrentMonth(now = new Date()) {
+  const current = businessYearMonth(now)
+  return {
+    month: `${current.year}-${String(current.month).padStart(2, '0')}`,
+    start: monthStart(current),
+    end: monthStart(shiftMonth(current.year, current.month, 1))
+  }
+}
+
+module.exports = { BUSINESS_TIME_ZONE, businessYearMonth, rangeForCurrentMonth, rangeForCurrentThreeMonths }

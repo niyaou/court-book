@@ -36,7 +36,7 @@
 - `coach_context`：初始化教练上下文和校区。
 - `pending_course`：`create`、`list`、`update`、`delete`；只读/写 `pending_course`。
 - `member_search`：姓名模糊搜索，最多 20 条，返回余额字段。
-- `coach_course_list`：只读当前教练当前自然月及前两个月的正式课；范围固定按 `Asia/Shanghai`，每页 30 条。
+- `coach_course_list`：只读当前教练当前自然月及前两个月的正式课；范围固定按 `Asia/Shanghai`，每页 30 条。响应额外返回不受分页影响的 `currentMonthSummary`，固定统计当前自然月的授课课程数量、总课程时长和等效总人数；授课课程含体验课、班课、私教，不含订场，等效人数沿用效率统计口径。
 
 云函数业务时间也使用 `YYYY-MM-DD HH:mm:ss`。教练提交的 `startTime`、`endTime` 作为中国业务本地字符串直接绑定到 MySQL `DATETIME`，不得先转换为 UTC；待审列表与正式课列表用 `DATE_FORMAT` 返回同一格式。正式课三自然月范围通过 `Intl` 显式按 `Asia/Shanghai` 计算，不能使用云函数运行时本地时区。`course_type` 为 `-2/-1/0/1/2`；订场 `is_adult` 继续沿用正式课程的实际字段值与默认语义。
 

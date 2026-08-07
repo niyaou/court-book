@@ -10,11 +10,26 @@ function decorateCourse(course) {
   }
 }
 function toast(title) { wx.showToast({ title, icon: 'none' }) }
+function emptyCurrentMonthSummary() {
+  return { month: '', monthLabel: '本月', totalCourses: 0, totalDuration: 0, equivalentTotalPeople: 0 }
+}
+function decorateCurrentMonthSummary(summary) {
+  if (!summary || !/^\d{4}-\d{2}$/.test(summary.month || '')) return emptyCurrentMonthSummary()
+  const [year, month] = summary.month.split('-').map(Number)
+  return {
+    month: summary.month,
+    monthLabel: `${year}年${month}月`,
+    totalCourses: Number(summary.totalCourses) || 0,
+    totalDuration: Number(summary.totalDuration) || 0,
+    equivalentTotalPeople: Number(summary.equivalentTotalPeople) || 0
+  }
+}
 
 Page({
   data: {
     activeTab: 'pending', pendingList: [], pendingLoading: false, pendingLoaded: false, pendingCollapsed: {},
-    formalList: [], formalLoading: false, formalLoaded: false, formalPage: 1, formalPageInput: '1', formalTotal: 0, formalTotalPages: 0, formalCollapsed: {}
+    formalList: [], formalLoading: false, formalLoaded: false, formalPage: 1, formalPageInput: '1', formalTotal: 0, formalTotalPages: 0, formalCollapsed: {},
+    currentMonthSummary: emptyCurrentMonthSummary()
   },
 
   async onLoad() {
@@ -65,7 +80,7 @@ Page({
       const result = await this.call('coach_course_list', { coachId: app.globalData.coachContext.coach.id, page })
       if (seq !== this.formalSeq) return
       if (result && result.success) {
-        this.setData({ formalList: (result.data || []).map(decorateCourse), formalLoaded: true, formalPage: result.page, formalPageInput: String(result.page), formalTotal: result.total, formalTotalPages: result.totalPages })
+        this.setData({ formalList: (result.data || []).map(decorateCourse), formalLoaded: true, formalPage: result.page, formalPageInput: String(result.page), formalTotal: result.total, formalTotalPages: result.totalPages, currentMonthSummary: decorateCurrentMonthSummary(result.currentMonthSummary) })
         wx.pageScrollTo({ scrollTop: 0, duration: 0 })
       } else if (result) toast(result.message || '正式课加载失败')
     } catch (error) { console.error(error); toast('正式课加载失败') }
