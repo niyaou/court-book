@@ -31,6 +31,28 @@
   </view>
 
   <view wx:if="{{activeTab === 'formal'}}">
+    <view class="month-summary">
+      <view class="summary-heading">
+        <text>{{currentMonthSummary.monthLabel}}</text>
+        <text class="summary-scope">当前自然月</text>
+      </view>
+      <view class="summary-metrics">
+        <view class="summary-metric">
+          <text class="summary-value">{{currentMonthSummary.totalCourses}}</text>
+          <text class="summary-label">课程数量</text>
+        </view>
+        <view class="summary-divider"></view>
+        <view class="summary-metric">
+          <text class="summary-value">{{currentMonthSummary.totalDuration}}</text>
+          <text class="summary-label">总课程时长（小时）</text>
+        </view>
+        <view class="summary-divider"></view>
+        <view class="summary-metric">
+          <text class="summary-value">{{currentMonthSummary.equivalentTotalPeople}}</text>
+          <text class="summary-label">等效总人数</text>
+        </view>
+      </view>
+    </view>
     <view class="loading" wx:if="{{formalLoading && !formalLoaded}}">加载中...</view>
     <view class="empty" wx:elif="{{formalLoaded && formalList.length === 0}}">近三个月暂无正式课程</view>
     <block wx:else>
