@@ -1,0 +1,30 @@
+<view class="container">
+  <view class="notice-tip">这是给管理员查看的充值待办，不会创建正式课程，也不会直接修改会员充值记录。</view>
+  <view class="form-card">
+    <view class="field"><text class="label">教练</text><text class="static-value">{{coach.name || ''}}</text></view>
+    <view class="field"><text class="label">充值日期</text><text class="static-value">{{rechargeDate}}</text></view>
+  </view>
+
+  <view class="form-card">
+    <view class="section-title">充值会员</view>
+    <view class="selected-member" wx:if="{{member}}">
+      <view><text class="member-name">{{member.name}}</text><text class="member-number" wx:if="{{member.number}}">{{member.number}}</text></view>
+      <text class="replace" bindtap="clearMember">更换</text>
+    </view>
+    <view class="inactive-tip" wx:if="{{member && !member.active}}">该会员已失效；可以保留原会员修改备注，也可以更换会员。</view>
+    <view class="search-box" wx:if="{{!member}}">
+      <input placeholder="输入会员姓名搜索" value="{{memberKeyword}}" bindinput="onMemberKeyword"/>
+      <view class="search-loading" wx:if="{{memberSearchLoading}}">搜索中...</view>
+      <view class="search-result" wx:for="{{memberResults}}" wx:key="id" data-id="{{item.id}}" bindtap="chooseMember"><text>{{item.name}}</text><text class="member-number">{{item.number || ''}}</text></view>
+    </view>
+  </view>
+
+  <view class="form-card">
+    <view class="section-title">充值备注 <text class="required">必填</text></view>
+    <textarea maxlength="500" placeholder="请填写充值方式、需管理员关注的事项等（最多 500 个字符）" value="{{note}}" bindinput="onNoteInput"/>
+    <view class="counter">{{noteLength}} / 500</view>
+  </view>
+
+  <view class="edit-tip" wx:if="{{mode === 'edit'}}">保存后记录会重新进入“待处理”，等待管理员再次知悉。</view>
+  <button class="submit" loading="{{submitting}}" disabled="{{submitting}}" bindtap="submit">{{mode === 'edit' ? '保存并重新上报' : '提交充值待办'}}</button>
+</view>

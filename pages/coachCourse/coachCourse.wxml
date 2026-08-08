@@ -1,56 +1,57 @@
 <view class="container">
-  <button class="create-button" bindtap="navigateToCreate">+ 新增课程</button>
+  <button class="create-button" bindtap="navigateToCreate">+ 新增填报</button>
   <view class="tabs">
-    <view class="tab {{activeTab === 'pending' ? 'active' : ''}}" data-tab="pending" bindtap="switchTab">待审课</view>
+    <view class="tab {{activeTab === 'pending' ? 'active' : ''}}" data-tab="pending" bindtap="switchTab">待处理</view>
     <view class="tab {{activeTab === 'formal' ? 'active' : ''}}" data-tab="formal" bindtap="switchTab">正式课</view>
+    <view class="tab {{activeTab === 'acknowledged' ? 'active' : ''}}" data-tab="acknowledged" bindtap="switchTab">已知悉充值</view>
   </view>
 
   <view wx:if="{{activeTab === 'pending'}}">
+    <view class="partial-error" wx:if="{{pendingError}}">{{pendingError}}，下拉可重试；已成功加载的记录仍保留。</view>
     <view class="loading" wx:if="{{pendingLoading && !pendingLoaded}}">加载中...</view>
-    <view class="empty" wx:elif="{{pendingLoaded && pendingList.length === 0}}">暂无待审课程</view>
+    <view class="empty" wx:elif="{{pendingLoaded && !pendingError && pendingList.length === 0}}">暂无待处理填报</view>
     <block wx:else>
-      <view class="course-card" wx:for="{{pendingList}}" wx:key="id">
-        <view class="card-title"><text>{{item.typeLabel}}</text><text class="status">待审</text></view>
-        <view class="course-row"><text>教练</text><text>{{item.coachName || '当前教练'}}</text></view>
-        <view class="course-row"><text>时间</text><text>{{item.startTime}} - {{item.endTime}}</text></view>
-        <view class="course-row"><text>时长</text><text>{{item.duration}} 小时</text></view>
-        <view class="course-row"><text>校区</text><text>{{item.courtName || '已失效校区'}}</text></view>
-        <view class="course-row" wx:if="{{item.adultLabel}}"><text>类型</text><text>{{item.adultLabel}}</text></view>
-        <view class="course-row" wx:if="{{item.description}}"><text>备注</text><text>{{item.description}}</text></view>
-        <view class="member-toggle" data-id="{{item.id}}" bindtap="togglePending">会员消费明细 {{pendingCollapsed[item.id] ? '展开' : '收起'}}</view>
-        <view class="members" wx:if="{{!pendingCollapsed[item.id]}}">
-          <view class="member" wx:for="{{item.membersData}}" wx:for-item="member" wx:key="memberId">
-            <text>{{member.memberName || '已失效会员'}}{{member.memberNumber ? '（' + member.memberNumber + '）' : ''}}</text>
-            <text>课时费 {{member.charge}} / 次卡 {{member.times}} / 年卡 {{member.annualTimes}} / 数量 {{member.quantities}}</text>
+      <view class="course-card {{item.submissionType === RECHARGE_NOTICE ? 'recharge-card' : ''}}" wx:for="{{pendingList}}" wx:key="compoundKey">
+        <block wx:if="{{item.submissionType === COURSE}}">
+          <view class="card-title"><text>{{item.typeLabel}}</text><text class="status">课程待审</text></view>
+          <view class="course-row"><text>教练</text><text>{{item.coachName || '当前教练'}}</text></view>
+          <view class="course-row"><text>时间</text><text>{{item.startTime}} - {{item.endTime}}</text></view>
+          <view class="course-row"><text>时长</text><text>{{item.duration}} 小时</text></view>
+          <view class="course-row"><text>校区</text><text>{{item.courtName || '已失效校区'}}</text></view>
+          <view class="course-row" wx:if="{{item.adultLabel}}"><text>类型</text><text>{{item.adultLabel}}</text></view>
+          <view class="course-row" wx:if="{{item.description}}"><text>备注</text><text class="wrap-value">{{item.description}}</text></view>
+          <view class="member-toggle" data-key="{{item.collapseKey}}" bindtap="togglePending">会员消费明细 {{pendingCollapsed[item.collapseKey] ? '展开' : '收起'}}</view>
+          <view class="members" wx:if="{{!pendingCollapsed[item.collapseKey]}}">
+            <view class="member" wx:for="{{item.membersData}}" wx:for-item="member" wx:key="memberId">
+              <text>{{member.memberName || '已失效会员'}}{{member.memberNumber ? '（' + member.memberNumber + '）' : ''}}</text>
+              <text>课时费 {{member.charge}} / 次卡 {{member.times}} / 年卡 {{member.annualTimes}} / 数量 {{member.quantities}}</text>
+            </view>
+            <view class="empty-member" wx:if="{{item.membersData.length === 0}}">本课程无需填写会员</view>
           </view>
-          <view class="empty-member" wx:if="{{item.membersData.length === 0}}">本课程无需填写会员</view>
-        </view>
-        <view class="actions"><button size="mini" data-id="{{item.id}}" bindtap="navigateToEdit">修改</button><button size="mini" class="danger" data-id="{{item.id}}" bindtap="deletePending">删除</button></view>
+          <view class="actions"><button size="mini" data-id="{{item.id}}" bindtap="navigateToEditCourse">修改</button><button size="mini" class="danger" data-id="{{item.id}}" bindtap="deletePending">删除</button></view>
+        </block>
+        <block wx:else>
+          <view class="card-title"><text>用户充值</text><text class="recharge-status">待知悉</text></view>
+          <view class="course-row"><text>会员</text><text class="wrap-value">{{item.memberName || '已失效会员'}}{{item.memberNumber ? '（' + item.memberNumber + '）' : ''}}</text></view>
+          <view class="course-row"><text>充值日期</text><text>{{item.rechargeDate}}</text></view>
+          <view class="course-row"><text>上报时间</text><text>{{item.updatedAt}}</text></view>
+          <view class="course-row"><text>备注</text><text class="wrap-value">{{item.note}}</text></view>
+          <view class="inactive-tip" wx:if="{{!item.memberActive}}">该会员已失效，仅保留历史身份。</view>
+          <view class="actions"><button size="mini" data-id="{{item.id}}" bindtap="navigateToEditNotice">修改</button><button size="mini" class="danger" data-id="{{item.id}}" bindtap="deleteNotice">删除</button></view>
+        </block>
       </view>
     </block>
   </view>
 
   <view wx:if="{{activeTab === 'formal'}}">
     <view class="month-summary">
-      <view class="summary-heading">
-        <text>{{currentMonthSummary.monthLabel}}</text>
-        <text class="summary-scope">当前自然月</text>
-      </view>
+      <view class="summary-heading"><text>{{currentMonthSummary.monthLabel}}</text><text class="summary-scope">当前自然月</text></view>
       <view class="summary-metrics">
-        <view class="summary-metric">
-          <text class="summary-value">{{currentMonthSummary.totalCourses}}</text>
-          <text class="summary-label">课程数量</text>
-        </view>
+        <view class="summary-metric"><text class="summary-value">{{currentMonthSummary.totalCourses}}</text><text class="summary-label">课程数量</text></view>
         <view class="summary-divider"></view>
-        <view class="summary-metric">
-          <text class="summary-value">{{currentMonthSummary.totalDuration}}</text>
-          <text class="summary-label">总课程时长（小时）</text>
-        </view>
+        <view class="summary-metric"><text class="summary-value">{{currentMonthSummary.totalDuration}}</text><text class="summary-label">总课程时长（小时）</text></view>
         <view class="summary-divider"></view>
-        <view class="summary-metric">
-          <text class="summary-value">{{currentMonthSummary.equivalentTotalPeople}}</text>
-          <text class="summary-label">等效总人数</text>
-        </view>
+        <view class="summary-metric"><text class="summary-value">{{currentMonthSummary.equivalentTotalPeople}}</text><text class="summary-label">等效总人数</text></view>
       </view>
     </view>
     <view class="loading" wx:if="{{formalLoading && !formalLoaded}}">加载中...</view>
@@ -62,11 +63,29 @@
         <view class="course-row"><text>时长</text><text>{{item.duration}} 小时</text></view>
         <view class="course-row"><text>校区</text><text>{{item.courtName || '已失效校区'}}</text></view>
         <view class="course-row" wx:if="{{item.adultLabel}}"><text>类型</text><text>{{item.adultLabel}}</text></view>
-        <view class="course-row" wx:if="{{item.description}}"><text>备注</text><text>{{item.description}}</text></view>
+        <view class="course-row" wx:if="{{item.description}}"><text>备注</text><text class="wrap-value">{{item.description}}</text></view>
         <view class="member-toggle" data-id="{{item.id}}" bindtap="toggleFormal">会员消费明细 {{formalCollapsed[item.id] ? '展开' : '收起'}}</view>
         <view class="members" wx:if="{{!formalCollapsed[item.id]}}"><view class="member" wx:for="{{item.membersData}}" wx:for-item="member" wx:key="memberId"><text>{{member.memberName || '已失效会员'}}{{member.memberNumber ? '（' + member.memberNumber + '）' : ''}}</text><text>课时费 {{member.charge}} / 次卡 {{member.times}} / 年卡 {{member.annualTimes}} / 数量 {{member.quantities}}</text></view><view class="empty-member" wx:if="{{item.membersData.length === 0}}">本课程无需填写会员</view></view>
       </view>
-      <view class="pagination" wx:if="{{formalTotalPages > 0}}"><text>第 {{formalPage}} / {{formalTotalPages}} 页，共 {{formalTotal}} 条</text><view class="page-actions"><button size="mini" disabled="{{formalPage <= 1}}" bindtap="previousPage">上一页</button><input type="number" value="{{formalPageInput}}" bindinput="onPageInput" confirm-type="done" bindconfirm="jumpPage"/><button size="mini" bindtap="jumpPage">跳转</button><button size="mini" disabled="{{formalPage >= formalTotalPages}}" bindtap="nextPage">下一页</button></view></view>
+      <view class="pagination" wx:if="{{formalTotalPages > 0}}"><text>第 {{formalPage}} / {{formalTotalPages}} 页，共 {{formalTotal}} 条</text><view class="page-actions"><button size="mini" disabled="{{formalPage <= 1}}" bindtap="previousFormalPage">上一页</button><input type="number" value="{{formalPageInput}}" bindinput="onFormalPageInput" confirm-type="done" bindconfirm="jumpFormalPage"/><button size="mini" bindtap="jumpFormalPage">跳转</button><button size="mini" disabled="{{formalPage >= formalTotalPages}}" bindtap="nextFormalPage">下一页</button></view></view>
+    </block>
+  </view>
+
+  <view wx:if="{{activeTab === 'acknowledged'}}">
+    <view class="history-tip">已知悉仅表示管理员看过，不代表真实充值已经完成。修改后会重新进入待处理。</view>
+    <view class="loading" wx:if="{{acknowledgedLoading && !acknowledgedLoaded}}">加载中...</view>
+    <view class="empty" wx:elif="{{acknowledgedLoaded && acknowledgedList.length === 0}}">暂无已知悉充值</view>
+    <block wx:else>
+      <view class="course-card recharge-card" wx:for="{{acknowledgedList}}" wx:key="compoundKey">
+        <view class="card-title"><text>用户充值</text><text class="acknowledged-status">已知悉</text></view>
+        <view class="course-row"><text>会员</text><text class="wrap-value">{{item.memberName || '已失效会员'}}{{item.memberNumber ? '（' + item.memberNumber + '）' : ''}}</text></view>
+        <view class="course-row"><text>充值日期</text><text>{{item.rechargeDate}}</text></view>
+        <view class="course-row"><text>知悉时间</text><text>{{item.acknowledgedAt}}</text></view>
+        <view class="course-row"><text>备注</text><text class="wrap-value">{{item.note}}</text></view>
+        <view class="inactive-tip" wx:if="{{!item.memberActive}}">该会员已失效，仅保留历史身份。</view>
+        <view class="actions"><button size="mini" data-id="{{item.id}}" bindtap="navigateToEditNotice">修改并重新上报</button></view>
+      </view>
+      <view class="pagination" wx:if="{{acknowledgedTotalPages > 0}}"><text>第 {{acknowledgedPage}} / {{acknowledgedTotalPages}} 页，共 {{acknowledgedTotal}} 条</text><view class="page-actions"><button size="mini" disabled="{{acknowledgedPage <= 1}}" bindtap="previousAcknowledgedPage">上一页</button><input type="number" value="{{acknowledgedPageInput}}" bindinput="onAcknowledgedPageInput" confirm-type="done" bindconfirm="jumpAcknowledgedPage"/><button size="mini" bindtap="jumpAcknowledgedPage">跳转</button><button size="mini" disabled="{{acknowledgedPage >= acknowledgedTotalPages}}" bindtap="nextAcknowledgedPage">下一页</button></view></view>
     </block>
   </view>
 </view>

@@ -12,7 +12,8 @@
     "pages/spendList/spendList",
     "pages/monthlyRevenue/monthlyRevenue",
     "pages/coachCourse/coachCourse",
-    "pages/coachCourseForm/coachCourseForm"
+    "pages/coachCourseForm/coachCourseForm",
+    "pages/rechargeNoticeForm/rechargeNoticeForm"
   ],
   "window": {
     "backgroundColor": "#F6F6F6",
