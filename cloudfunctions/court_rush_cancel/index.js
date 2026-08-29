@@ -1,4 +1,5 @@
 const cloud = require('wx-server-sdk');
+const { canProcessCancelledRush } = require('./refund-policy');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const BATCH_SIZE = 1;
@@ -88,7 +89,15 @@ exports.main = async (event) => {
 
   const rushRes = await db.collection('court_rush').doc(rushId).get();
   const rush = rushRes.data;
-  if (!rush || rush.deleted_at) return { success: false, error: 'RUSH_NOT_FOUND' };
+  if (!canProcessCancelledRush(rush, internal)) {
+    console.error('[court_rush_cancel] rush unavailable', {
+      rushId,
+      internal,
+      found: Boolean(rush),
+      deleted: Boolean(rush && rush.deleted_at),
+    });
+    return { success: false, error: 'RUSH_NOT_FOUND' };
+  }
 
   if (!internal) {
     await db.collection('court_rush').doc(rushId).update({
@@ -113,7 +122,17 @@ exports.main = async (event) => {
     cloud.callFunction({
       name: 'court_rush_cancel',
       data: { court_rush_id: rushId, internal: true, batchSize },
-    }).catch(() => {});
+    }).then((res) => {
+      const result = res && res.result;
+      if (!result || !result.success) {
+        console.error('[court_rush_cancel] next refund batch failed', { rushId, result });
+      }
+    }).catch((err) => {
+      console.error('[court_rush_cancel] next refund batch invocation failed', {
+        rushId,
+        message: err && err.message,
+      });
+    });
   } else {
     await db.collection('court_rush').doc(rushId).update({
       data: {
