@@ -159,7 +159,11 @@
           <view class="payment-modal-note-item">1.一片场地最多服务6人。</view>
           <view class="payment-modal-note-item">2.如举办商业活动或比赛，请联系客服。</view>
           <view class="payment-modal-note-item">3.单次订场超过三小时请联系客服。</view>
-          <view class="payment-modal-note-item">4.违反上述规定，本俱乐部有权终止服务</view>
+          <view class="payment-modal-note-item">4.违反上述规定，本俱乐部有权终止服务。</view>
+          <view class="payment-modal-note-item">5.球场请勿吸烟，爱护环境。</view>
+          <view class="payment-modal-note-item">6.订场不含球和球拍。租赁费用：球拍20元/支/小时，训练球20元/20个/小时。</view>
+          <view class="payment-modal-note-item">7.进网球场需要穿网球鞋进场,禁止穿高跟鞋。</view>
+          <view class="payment-modal-note-item">8.请用完训练球和球拍后将球收到球筐中，球拍挂于球车上。</view>
         </view>
       </view>
       <view class="payment-modal-footer">
