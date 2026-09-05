@@ -100,6 +100,22 @@ Page({
     });
   },
 
+  // 团课页面尚未注册时提供明确反馈，避免跳转到不存在的页面
+  navigateToGroupCourse: function() {
+    wx.showToast({
+      title: '团课功能正在准备中',
+      icon: 'none',
+      duration: 1800
+    })
+  },
+
+  // 畅打是底部 Tab，使用 switchTab 进入现有页面
+  navigateToRush: function() {
+    wx.switchTab({
+      url: '/pages/rush/rush'
+    })
+  },
+
   // 跳转到订单展示页面
   navigateToAbout: function() {
     console.log("navigateToAbout",this.data.isClicking)
