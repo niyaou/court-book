@@ -1,271 +1,332 @@
 /**index.wxss**/
-.userinfo {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  color: #aaa;
+page {
+  background: #f4f8fb;
 }
 
-.userinfo-avatar {
-  overflow: hidden;
-  width: 128rpx;
-  height: 128rpx;
-  margin: 20rpx;
-  border-radius: 50%;
-}
-
-.userinfo-nickname {
-  margin-top: 20rpx;
-}
-
-.usermotto {
-  margin-top: 200px;
-}
-
-.container {
-  padding: 0;
-  position: relative;
-  background: linear-gradient(to bottom, #f8f9fa, #ffffff);
+.home-page {
+  box-sizing: border-box;
   min-height: 100vh;
+  padding: 24rpx 24rpx 40rpx;
+  color: #183247;
+  background:
+    radial-gradient(circle at 100% 0, rgba(18, 150, 219, 0.08), transparent 360rpx),
+    linear-gradient(180deg, #f8fbfd 0%, #f3f8fb 100%);
 }
 
-.banner {
-  width: 100%;
-  height: 300rpx;
+.brand-section {
+  padding-top: 8rpx;
 }
 
-.banner swiper {
-  width: 100%;
-  height: 100%;
+.brand-card {
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  height: 190rpx;
+  padding: 16rpx 28rpx;
+  border: 1rpx solid rgba(18, 150, 219, 0.09);
+  border-radius: 24rpx;
+  background: #ffffff;
+  box-shadow: 0 12rpx 32rpx rgba(27, 67, 91, 0.08);
 }
 
-.banner-item {
+.brand-logo {
+  position: relative;
+  z-index: 2;
+  display: block;
   width: 100%;
-  height: 100%;
+  height: 158rpx;
+  margin: 0 auto;
+  /* 白底 JPG 与后方品牌色圆形做正片叠底，白色区域自然透出装饰色。 */
+  mix-blend-mode: multiply;
+}
+
+.brand-accent {
+  position: absolute;
+  z-index: 1;
+  border-radius: 50%;
+  opacity: 0.9;
+}
+
+.brand-accent-yellow {
+  top: -34rpx;
+  right: -30rpx;
+  width: 112rpx;
+  height: 112rpx;
+  background: #f6e838;
+}
+
+.brand-accent-green {
+  right: 48rpx;
+  bottom: -46rpx;
+  width: 88rpx;
+  height: 88rpx;
+  background: #64a834;
+}
+
+.section {
+  margin-top: 26rpx;
+}
+
+.section-heading {
   display: flex;
   align-items: center;
-  justify-content: center;
-  background-color: #1296db;
-  color: #fff;
-  font-size: 32rpx;
-}
-
-.quick-nav {
-  display: flex;
-  justify-content: space-around;
-  padding: 30rpx;
-  background-color: #fff;
-  margin-top: 20rpx;
-}
-
-.nav-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 20rpx 40rpx;
-  background-color: #e6f7ff;
-  border-radius: 8rpx;
-}
-
-.nav-item image {
-  width: 80rpx;
-  height: 80rpx;
-  margin-bottom: 10rpx;
-}
-
-.nav-item text {
-  font-size: 28rpx;
-  color: #1296db;
-}
-
-.news-section {
-  background: linear-gradient(145deg, #ffffff, #f8f9fa);
-  margin: 20rpx;
-  padding: 20rpx;
-  border-radius: 20rpx;
-  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.06);
-  border: 1rpx solid rgba(0, 0, 0, 0.05);
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+  padding: 0 2rpx;
 }
 
 .section-title {
-  font-size: 32rpx;
-  font-weight: bold;
-  color: #2c3e50;
-  margin-bottom: 16rpx;
-  position: relative;
-  padding: 8rpx 20rpx;
-  background: linear-gradient(90deg, #f0f4f8, transparent);
-  border-radius: 8rpx;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #183247;
 }
 
-.section-title::before {
-  content: '';
+.section-note {
+  font-size: 21rpx;
+  color: #94a4b0;
+}
+
+.activity-grid {
+  display: flex;
+  gap: 16rpx;
+}
+
+.activity-card {
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  flex: 1;
+  min-width: 0;
+  height: 276rpx;
+  padding: 24rpx 22rpx 20rpx;
+  border-radius: 24rpx;
+  box-shadow: 0 12rpx 28rpx rgba(37, 89, 119, 0.12);
+}
+
+.activity-card:active,
+.campus-item:active {
+  opacity: 0.88;
+  transform: scale(0.98);
+}
+
+.course-card {
+  color: #ffffff;
+  background: linear-gradient(145deg, #1296db 0%, #29b9df 100%);
+}
+
+.rush-card {
+  color: #173043;
+  background: linear-gradient(145deg, #f7df28 0%, #ffe85d 100%);
+}
+
+.activity-decoration {
   position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 6rpx;
-  height: 30rpx;
-  background: #4a90e2;
-  border-radius: 3rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.decoration-large {
+  top: -64rpx;
+  right: -50rpx;
+  width: 190rpx;
+  height: 190rpx;
+}
+
+.decoration-small {
+  right: 64rpx;
+  bottom: -48rpx;
+  width: 112rpx;
+  height: 112rpx;
+  opacity: 0.1;
+}
+
+.activity-icon {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48rpx;
+  height: 48rpx;
+  margin-bottom: 16rpx;
+  border-radius: 15rpx;
+  font-size: 24rpx;
+  font-weight: 700;
+  color: #1296db;
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.rush-card .activity-icon {
+  color: #ffffff;
+  background: #1b6d9c;
+}
+
+.activity-kicker {
+  position: relative;
+  z-index: 1;
+  font-size: 20rpx;
+  opacity: 0.8;
+}
+
+.activity-title {
+  position: relative;
+  z-index: 1;
+  margin-top: 6rpx;
+  font-size: 34rpx;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.activity-desc {
+  position: relative;
+  z-index: 1;
+  margin-top: 7rpx;
+  font-size: 20rpx;
+  opacity: 0.86;
+}
+
+.activity-action {
+  position: absolute;
+  z-index: 1;
+  right: 20rpx;
+  bottom: 18rpx;
+  left: 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 20rpx;
+  font-weight: 600;
+}
+
+.activity-arrow {
+  font-size: 36rpx;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.booking-section,
+.news-section {
+  box-sizing: border-box;
+  padding: 22rpx;
+  border: 1rpx solid rgba(27, 67, 91, 0.06);
+  border-radius: 24rpx;
+  background: #ffffff;
+  box-shadow: 0 10rpx 26rpx rgba(27, 67, 91, 0.07);
+}
+
+.campus-grid {
+  display: flex;
+  gap: 14rpx;
+}
+
+.campus-item {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: 132rpx;
+  border: 1rpx solid #e8f0f5;
+  border-radius: 18rpx;
+  background: #f5f9fc;
+}
+
+.campus-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  font-size: 20rpx;
+  font-weight: 700;
+  color: #ffffff;
+  background: #1296db;
+}
+
+.campus-name {
+  margin-top: 12rpx;
+  overflow: hidden;
+  max-width: 100%;
+  font-size: 23rpx;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #29475c;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.news-section {
+  padding-bottom: 12rpx;
 }
 
 .news-list {
-  display: flex;
-  flex-direction: column;
+  overflow: hidden;
+  border-radius: 16rpx;
+  background: #f8fafc;
 }
 
 .news-item {
-  padding: 16rpx;
-  border-bottom: 1rpx solid #f0f0f0;
-  background: linear-gradient(90deg, #ffffff, #f8f9fa);
-  margin-bottom: 8rpx;
-  border-radius: 12rpx;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.03);
+  display: flex;
+  align-items: flex-start;
+  padding: 20rpx 18rpx;
+  border-bottom: 1rpx solid #eaf0f4;
+}
+
+.news-item:last-child {
+  border-bottom: 0;
+}
+
+.news-marker {
+  flex: 0 0 auto;
+  width: 7rpx;
+  height: 32rpx;
+  margin-top: 3rpx;
+  margin-right: 14rpx;
+  border-radius: 4rpx;
+  background: #1296db;
+}
+
+.news-content {
+  flex: 1;
+  min-width: 0;
 }
 
 .news-title {
-  font-size: 26rpx;
-  color: #2c3e50;
-  margin-bottom: 8rpx;
+  display: block;
+  font-size: 24rpx;
   font-weight: 500;
+  line-height: 1.65;
+  color: #29475c;
 }
 
 .news-date {
-  font-size: 22rpx;
-  color: #7f8c8d;
   display: block;
-  margin-top: 4rpx;
+  margin-top: 8rpx;
+  font-size: 20rpx;
+  color: #9aa9b4;
 }
 
-.header-section {
-  height: 320rpx;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20rpx 0;
-  background:#fff;
-
-}
-
-.logo {
-  width: 180rpx;
-  height: 80rpx;
-  margin-bottom: 10rpx;
-}
-
-.main-title {
-  font-size: 36rpx;
-  font-weight: bold;
-  color: #333333;
-  margin-bottom: 8rpx;
-  text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.05);
-}
-
-.subtitle {
-  font-size: 26rpx;
-  color: #666666;
-  font-weight: 500;
-  margin-bottom: 12rpx;
-}
-
-.info-section {
-  margin: -20rpx 20rpx 16rpx;
-  background: linear-gradient(145deg, #ffffff, #f8f9fa);
-  border-radius: 20rpx;
-  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.08);
-  padding: 20rpx;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  position: relative;
-  z-index: 2;
-  border: 1rpx solid rgba(0, 0, 0, 0.05);
-}
-
-.business-hours {
-  font-size: 28rpx;
-  color: #2c3e50;
-  font-weight: 600;
-  margin-bottom: 8rpx;
-  letter-spacing: 1rpx;
-  background: linear-gradient(90deg, #f0f4f8, #ffffff);
-  padding: 8rpx 20rpx;
-  border-radius: 12rpx;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.03);
-}
-
-.address {
-  font-size: 24rpx;
-  color: #666;
+.news-empty {
+  padding: 30rpx 20rpx;
   text-align: center;
-  line-height: 1.4;
-  background: linear-gradient(90deg, #f8f9fa, #ffffff);
-  padding: 8rpx 20rpx;
-  border-radius: 12rpx;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.03);
+  font-size: 22rpx;
+  color: #9aa9b4;
 }
 
-.quick-nav-grid {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: linear-gradient(145deg, #ffffff, #f8f9fa);
-  margin: 20rpx;
-  border-radius: 20rpx;
-  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.06);
-  padding: 20rpx;
-  border: 1rpx solid rgba(0, 0, 0, 0.05);
-  gap: 20rpx;
-}
-
-.quick-nav-grid .nav-item,
-.quick-nav-grid button.nav-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: 28rpx;
-  color: #2c3e50;
-  background: linear-gradient(145deg, #ffffff, #f0f4f8);
-  border-radius: 16rpx;
-  padding: 20rpx 10rpx;
-  border: none;
-  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
-  min-height: 120rpx;
-}
-
-.quick-nav-grid .nav-item:active,
-.quick-nav-grid button.nav-item:active {
-  transform: scale(0.98);
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
-}
-
-.bg-logo0-img {
-  width: 80vw;
-  display: block;
-  margin: 0 auto;
-  pointer-events: none;
-
-}
-
-/* 版本号样式 */
 .version-info {
   display: flex;
-  justify-content: center;
   align-items: center;
-  padding: 20rpx;
-  margin-top: 20rpx;
-  opacity: 0.6;
+  justify-content: center;
+  padding: 30rpx 20rpx 12rpx;
+  opacity: 0.5;
 }
 
 .version-text {
-  font-size: 20rpx;
-  color: #999;
-  font-family: 'Courier New', monospace;
-  letter-spacing: 1rpx;
   padding: 8rpx 16rpx;
+  font-family: 'Courier New', monospace;
+  font-size: 19rpx;
+  letter-spacing: 1rpx;
+  color: #8b9aa5;
 }

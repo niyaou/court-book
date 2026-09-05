@@ -1,39 +1,92 @@
 <!--index.wxml-->
-<view class="container">
-  <view class="header-section">
-  <image src="cloud://cloud1-6gebob4m4ba8f3de.636c-cloud1-6gebob4m4ba8f3de-1357716382/mp_asset/微信图片_20250517203940.jpg" mode="widthFix"></image>
-   
-    <view class="main-title">订场小程序</view>
-    <view class="subtitle">已开放麓坊、桐梓林和雅居乐校区·其他校区敬请期待</view>
-  </view>
-  <view class="info-section">
-    <view class="business-hours">营业时间: 08:00-24:00</view>
-    <view class="address">成都市天府新区麓坊运动公园内</view>
-  </view>
-  <view class="quick-nav-grid">
-    <view class="nav-item" bindtap="navigateToBooking" data-campus="麓坊校区">
-      <text>麓坊订场</text>
+<view class="home-page">
+  <view class="brand-section">
+    <view class="brand-card">
+      <image
+        class="brand-logo"
+        src="cloud://cloud1-6gebob4m4ba8f3de.636c-cloud1-6gebob4m4ba8f3de-1357716382/mp_asset/微信图片_20250517203940.jpg"
+        mode="aspectFit"
+      ></image>
+      <view class="brand-accent brand-accent-yellow"></view>
+      <view class="brand-accent brand-accent-green"></view>
     </view>
-    <view class="nav-item" bindtap="navigateToBooking" data-campus="桐梓林校区">
-      <text>桐梓林订场</text>
-    </view>
-    <view class="nav-item" bindtap="navigateToBooking" data-campus="雅居乐校区">
-      <text>雅居乐订场</text>
-    </view>
-    <!-- <button class="nav-item" open-type="getPhoneNumber" bindgetphonenumber="getPhoneNumber">获取电话</button> -->
-   
   </view>
-  <view class="news-section">
-    <view class="section-title">最新动态</view>
-    <view class="news-list">
-      <view class="news-item" wx:for="{{newsList}}" wx:key="id">
-        <text class="news-title">{{item.content}}</text>
-        <text class="news-date">{{item.date}}</text>
+
+  <view class="section activity-section">
+    <view class="section-heading">
+      <text class="section-title">网球活动</text>
+      <text class="section-note">找到适合你的上场方式</text>
+    </view>
+
+    <view class="activity-grid">
+      <view class="activity-card course-card" bindtap="navigateToGroupCourse">
+        <view class="activity-decoration decoration-large"></view>
+        <view class="activity-decoration decoration-small"></view>
+        <view class="activity-icon">课</view>
+        <view class="activity-kicker">专业教学</view>
+        <view class="activity-title">公开团课</view>
+        <view class="activity-desc">精品小班 · 单次报名</view>
+        <view class="activity-action">
+          <text>即将上线</text>
+          <text class="activity-arrow">›</text>
+        </view>
+      </view>
+
+      <view class="activity-card rush-card" bindtap="navigateToRush">
+        <view class="activity-decoration decoration-large"></view>
+        <view class="activity-decoration decoration-small"></view>
+        <view class="activity-icon">畅</view>
+        <view class="activity-kicker">轻松开打</view>
+        <view class="activity-title">畅打活动</view>
+        <view class="activity-desc">选场次 · 即刻参与</view>
+        <view class="activity-action">
+          <text>查看活动</text>
+          <text class="activity-arrow">›</text>
+        </view>
       </view>
     </view>
   </view>
-  
-  <!-- 版本号显示 -->
+
+  <view class="section booking-section">
+    <view class="section-heading">
+      <text class="section-title">场地预订</text>
+
+    </view>
+
+    <view class="campus-grid">
+      <view class="campus-item" bindtap="navigateToBooking" data-campus="麓坊校区">
+        <view class="campus-icon">麓</view>
+        <text class="campus-name">麓坊</text>
+      </view>
+      <view class="campus-item" bindtap="navigateToBooking" data-campus="桐梓林校区">
+        <view class="campus-icon">桐</view>
+        <text class="campus-name">桐梓林</text>
+      </view>
+      <view class="campus-item" bindtap="navigateToBooking" data-campus="雅居乐校区">
+        <view class="campus-icon">雅</view>
+        <text class="campus-name">雅居乐</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="section news-section">
+    <view class="section-heading">
+      <text class="section-title">最新动态</text>
+      <text class="section-note">俱乐部通知</text>
+    </view>
+    <view class="news-list">
+      <view class="news-item" wx:for="{{newsList}}" wx:key="id">
+        <view class="news-marker"></view>
+        <view class="news-content">
+          <text class="news-title">{{item.content}}</text>
+          <text class="news-date">{{item.date}}</text>
+        </view>
+      </view>
+      <view class="news-empty" wx:if="{{!newsList.length}}">暂无最新动态</view>
+    </view>
+  </view>
+
+  <!-- 保留原有管理员隐藏入口 -->
   <view class="version-info" bindtap="navigateToAbout">
     <text class="version-text">v{{version}}</text>
   </view>
