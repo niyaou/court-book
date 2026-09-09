@@ -1,0 +1,51 @@
+@import "../../utils/groupCourse.wxss";
+.coach {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+}
+.coach-initial {
+  background: #e8f6fd;
+  color: #1296db;
+  border-radius: 16rpx;
+  width: 76rpx;
+  height: 76rpx;
+  line-height: 76rpx;
+  text-align: center;
+  font-size: 34rpx;
+  flex-shrink: 0;
+}
+.rule {
+  display: flex;
+  gap: 16rpx;
+  line-height: 1.8;
+  color: #70899c;
+  font-size: 24rpx;
+  margin-top: 18rpx;
+}
+.rule-number {
+  color: #1296db;
+  background: #e8f6fd;
+  border-radius: 50%;
+  height: 34rpx;
+  line-height: 34rpx;
+  min-width: 34rpx;
+  text-align: center;
+  margin-top: 6rpx;
+}
+.personal {
+  border: 2rpx solid #c8e8f8;
+}
+.personal .section-title {
+  margin-bottom: 0;
+}
+.personal > .row {
+  margin-bottom: 18rpx;
+}
+.participant {
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #edf3f6;
+}
+.admin-note {
+  margin-top: 20rpx;
+}

@@ -1,3 +1,16 @@
+## 已确认的项目决策：手机号作为业务身份
+
+用户已明确理解并接受以手机号作为身份依据的风险。此决策跨 session、跨对话持续有效，除非用户明确修改。
+
+- 登录状态、管理员权限、会员资格、报名唯一性、本人记录及退款归属统一依据 `phoneNumber`。
+- 复用个人中心已有手机号和全局个人资料，与畅打保持一致。资料缺失时走现有个人中心流程。
+- 前端管理员入口与管理操作显示统一使用 `manager_permissions` 初始化/刷新后的全局权限列表，按当前手机号匹配；团课接口返回的 `viewer.isAdmin` 不得覆盖该权限来源。服务端业务操作仍按手机号查库校验权限。
+- 不自行增加独立登录 token、手机号与 openid 绑定表、重复手机号授权或身份迁移流程。
+- `openid` 不参与业务身份判断；支付协议参数及定时任务调用来源识别等技术用途可保留。
+- 后续实现、审查和对话直接沿用此决策，不反复要求用户确认风险，不仅因这一已接受取舍而暂停工作或要求重做认证设计。
+- 继续按手机号在服务端查询业务权限、会员资格，并执行金额、容量、状态和幂等校验。这些是业务正确性检查，不是重新评估身份方案。
+- 本规则记录用户的业务决策，不将客户端不可篡改表述为已核实的平台技术保证，也不改变工具或平台自身的权限机制。
+
 ## Skills
 A skill is a set of local instructions to follow that is stored in a `SKILL.md` file. Below is the list of skills that can be used. Each entry includes a name, description, and file path so you can open the source for full instructions when using a specific skill.
 
@@ -30,3 +43,21 @@ A skill is a set of local instructions to follow that is stored in a `SKILL.md` 
   - Avoid deep reference-chasing: prefer opening only files directly linked from `SKILL.md` unless you're blocked.
   - When variants exist (frameworks, providers, domains), pick only the relevant reference file(s) and note that choice.
 - Safety and fallback: If a skill can't be applied cleanly (missing files, unclear instructions), state the issue, pick the next-best approach, and continue.
+
+
+## 团课数据源规则
+
+- 团课教练资料复用 CloudBase `manager`，禁止重新引入独立 CloudBase `coach` 集合。
+- 团课场地使用 CloudBase `court`；MySQL 同名 court/coach 仅属于原有教练与课耗模块，不能混用主键。
+- 团课对 MySQL 的依赖仅为只读 prepaid_card 的 VIP 判断，不写正式课程、会员课耗。
+- 新增团课集合只有 campus、group_course_template、group_course、group_course_enrollment、group_course_payment、group_course_refund；已有集合无需重复创建。
+
+- 团课 VIP 复用已有 club_member 云函数及订场会员资格公式；只在价格展示和报名时查询，创建/取消不查询。付款以服务端报名金额快照为准；不再为团课配置独立 MySQL 连接。
+
+- 团课支付沿用订场、畅打的代码配置方式：商户号与回调云环境集中维护于 cloudfunctions/group_course/lib/paymentConfig.js，通过构建同步四个团课云函数，不要求支付环境变量。
+
+## 团课价格与默认场地决策（2026-09-06）
+
+- VIP直接手填`vipPriceYuan`，不使用默认八折或自动折扣；原价与VIP均为至少1元的整数，VIP不高于原价。用户确认尚无已发布课程，无需旧价格兼容。
+- 仅当`bookingManaged=false`且校区没有任何CloudBase `court`记录时，由服务端提供1号场、2号场固定逻辑标识，不创建court记录；有真实场地则只使用真实列表。
+- 发布时重新校验默认标识和校区条件；同校区、同场地编号继续参与团课冲突判断，不写订场占用。

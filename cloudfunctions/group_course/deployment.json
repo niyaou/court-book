@@ -1,0 +1,228 @@
+{
+  "functions": {
+    "group_course": {
+      "timeoutSeconds": 120,
+      "memoryMB": 256
+    },
+    "group_course_payment_callback": {
+      "timeoutSeconds": 60,
+      "memoryMB": 256
+    },
+    "group_course_refund_callback": {
+      "timeoutSeconds": 60,
+      "memoryMB": 256
+    },
+    "group_course_maintenance": {
+      "timeoutSeconds": 120,
+      "memoryMB": 512
+    }
+  },
+  "requiredEnvironment": [],
+  "databaseRules": {
+    "campus": {
+      "read": false,
+      "write": false
+    },
+    "group_course_template": {
+      "read": false,
+      "write": false
+    },
+    "group_course": {
+      "read": false,
+      "write": false
+    },
+    "group_course_enrollment": {
+      "read": false,
+      "write": false
+    },
+    "group_course_payment": {
+      "read": false,
+      "write": false
+    },
+    "group_course_refund": {
+      "read": false,
+      "write": false
+    }
+  },
+  "indexes": [
+    {
+      "collection": "campus",
+      "fields": [
+        "name"
+      ],
+      "unique": true
+    },
+    {
+      "collection": "campus",
+      "fields": [
+        "enabled",
+        "sortOrder"
+      ]
+    },
+    {
+      "collection": "group_course_template",
+      "fields": [
+        "enabled",
+        "sortOrder"
+      ]
+    },
+    {
+      "collection": "court",
+      "fields": [
+        "campus"
+      ]
+    },
+    {
+      "collection": "court_order_collection",
+      "fields": [
+        "campus",
+        "court_id"
+      ],
+      "unique": true
+    },
+    {
+      "collection": "group_course",
+      "fields": [
+        "status",
+        "startAt"
+      ]
+    },
+    {
+      "collection": "group_course",
+      "fields": [
+        "publishedBy",
+        "publishRequestId"
+      ],
+      "unique": true
+    },
+    {
+      "collection": "group_course",
+      "fields": [
+        "coachId",
+        "status",
+        "startAt"
+      ]
+    },
+    {
+      "collection": "group_course",
+      "fields": [
+        "campus",
+        "courtNumber",
+        "status",
+        "startAt"
+      ]
+    },
+    {
+      "collection": "group_course",
+      "fields": [
+        "status",
+        "cancellationCleanupCompleted",
+        "maintenanceAt"
+      ]
+    },
+    {
+      "collection": "group_course_enrollment",
+      "fields": [
+        "courseId",
+        "phoneNumber"
+      ],
+      "unique": true
+    },
+    {
+      "collection": "group_course_enrollment",
+      "fields": [
+        "courseId",
+        "status"
+      ]
+    },
+    {
+      "collection": "group_course_enrollment",
+      "fields": [
+        "phoneNumber",
+        "createdAt"
+      ]
+    },
+    {
+      "collection": "group_course_enrollment",
+      "fields": [
+        "status",
+        "attemptStartedAt"
+      ]
+    },
+    {
+      "collection": "group_course_payment",
+      "fields": [
+        "outTradeNo"
+      ],
+      "unique": true
+    },
+    {
+      "collection": "group_course_payment",
+      "fields": [
+        "enrollmentId",
+        "createdAt"
+      ]
+    },
+    {
+      "collection": "group_course_payment",
+      "fields": [
+        "courseId",
+        "status"
+      ]
+    },
+    {
+      "collection": "group_course_payment",
+      "fields": [
+        "status",
+        "queryNextAt"
+      ]
+    },
+    {
+      "collection": "group_course_refund",
+      "fields": [
+        "outRefundNo"
+      ],
+      "unique": true
+    },
+    {
+      "collection": "group_course_refund",
+      "fields": [
+        "paymentId"
+      ],
+      "unique": true
+    },
+    {
+      "collection": "group_course_refund",
+      "fields": [
+        "courseId",
+        "status"
+      ]
+    },
+    {
+      "collection": "group_course_refund",
+      "fields": [
+        "status",
+        "nextRetryAt"
+      ]
+    },
+    {
+      "collection": "manager",
+      "fields": [
+        "phoneNumber"
+      ]
+    }
+  ],
+  "dependencies": {
+    "club_member": {
+      "purpose": "VIP lookup for list/detail/enroll; existing cloud function owns MySQL settings",
+      "environment": [
+        "DB_HOST",
+        "DB_PORT",
+        "DB_USER",
+        "DB_PASSWORD",
+        "DB_DATABASE"
+      ]
+    }
+  },
+  "paymentConfigSource": "cloudfunctions/group_course/lib/paymentConfig.js"
+}

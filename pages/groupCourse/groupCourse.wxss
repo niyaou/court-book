@@ -1,0 +1,70 @@
+@import "../../utils/groupCourse.wxss";
+.tabs {
+  display: flex;
+  border-radius: 17rpx;
+  padding: 6rpx;
+  background: #e5eff6;
+  margin-bottom: 20rpx;
+}
+.tab {
+  flex: 1;
+  padding: 17rpx;
+  text-align: center;
+  font-size: 25rpx;
+  color: #6c869b;
+  font-weight: 600;
+}
+.tab.selected {
+  background: #fff;
+  color: #1296db;
+  border-radius: 13rpx;
+  box-shadow: 0 2rpx 8rpx #d2e3ed;
+}
+.filters {
+  white-space: nowrap;
+  margin-bottom: 22rpx;
+}
+.filter {
+  display: inline-block;
+  padding: 10rpx 22rpx;
+  background: white;
+  color: #8198a9;
+  border: 1rpx solid #dfebf3;
+  border-radius: 30rpx;
+  font-size: 22rpx;
+  margin-right: 12rpx;
+}
+.filter.active {
+  color: #1296db;
+  border-color: #95d7f5;
+  background: #ebf8ff;
+}
+.capacity {
+  margin-top: 22rpx;
+  font-size: 21rpx;
+}
+.detail-link {
+  background: #1296db;
+  border-radius: 28rpx;
+  color: white;
+  padding: 14rpx 22rpx;
+  font-size: 22rpx;
+}
+.create {
+  margin: 0;
+  z-index: 1;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.15);
+  font-size: 22rpx;
+  padding: 0 15rpx;
+  line-height: 2;
+  border-radius: 20rpx;
+}
+.create:after {
+  border: 0;
+}
+.enrollment {
+  padding: 16rpx 0;
+  margin-bottom: 12rpx;
+  border-bottom: 1rpx solid #edf3f6;
+}

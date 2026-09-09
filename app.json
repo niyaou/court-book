@@ -3,6 +3,9 @@
     "pages/index/index",
     "pages/booking/booking",
     "pages/rush/rush",
+    "pages/groupCourse/groupCourse",
+    "pages/groupCourseDetail/groupCourseDetail",
+    "pages/groupCourseForm/groupCourseForm",
     "pages/rushDetail/rushDetail",
     "pages/member/member",
     "pages/accountSearch/accountSearch",
@@ -34,6 +37,10 @@
       {
         "pagePath": "pages/booking/booking",
         "text": "场地预订"
+      },
+      {
+        "pagePath": "pages/groupCourse/groupCourse",
+        "text": "团课"
       },
       {
         "pagePath": "pages/rush/rush",

@@ -27,7 +27,7 @@
         <view class="activity-title">公开团课</view>
         <view class="activity-desc">精品小班 · 单次报名</view>
         <view class="activity-action">
-          <text>即将上线</text>
+          <text>查看团课</text>
           <text class="activity-arrow">›</text>
         </view>
       </view>

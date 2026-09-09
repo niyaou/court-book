@@ -1,0 +1,17 @@
+"use strict";
+// Match booking's shared member source and balance formula. No duplicate MySQL connection.
+function createVipLookup(cloud) {
+  return async (phoneNumber) => {
+    const response = await cloud.callFunction({ name: "club_member", data: { phoneNumber } });
+    const result = response && response.result;
+    if (result && result.success === false && result.data === null &&
+        result.message === "未找到对应的会员信息") return false;
+    if (!result || !result.success || !result.data) throw Error("MEMBER_LOOKUP_FAILED");
+    const row = result.data;
+    const balance = Number(row.rest_charge || 0) +
+      Number(row.annual_count || 0) * 150 + Number(row.times_count || 0) * 150;
+    if (!Number.isFinite(balance)) throw Error("MEMBER_BALANCE_INVALID");
+    return balance > 0;
+  };
+}
+module.exports = { createVipLookup };

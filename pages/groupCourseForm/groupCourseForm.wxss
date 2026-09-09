@@ -1,0 +1,92 @@
+@import "../../utils/groupCourse.wxss";
+.field {
+  margin-top: 22rpx;
+  min-width: 0;
+  flex: 1;
+}
+.field-label {
+  display: block;
+  color: #637f94;
+  font-size: 23rpx;
+  font-weight: 600;
+  margin-bottom: 12rpx;
+}
+.control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 76rpx;
+  height: auto;
+  background: #f6f9fc;
+  border: 1rpx solid #e1ebf3;
+  border-radius: 13rpx;
+  padding: 16rpx 18rpx;
+  font-size: 25rpx;
+  color: #34576f;
+  line-height: 1.6;
+}
+.control > text {
+  color: #91a8b9;
+  margin-left: 10rpx;
+}
+.textarea {
+  height: 210rpx;
+  display: block;
+}
+.field-grid {
+  display: flex;
+  gap: 20rpx;
+}
+.preview {
+  color: #1296db;
+  font-weight: 700;
+}
+.field-hint {
+  color: #94a6b4;
+  font-size: 22rpx;
+  line-height: 1.7;
+  margin-top: 12rpx;
+}
+.overlay {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  background: rgba(15, 40, 61, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32rpx;
+}
+.dialog {
+  box-sizing: border-box;
+  width: 100%;
+  background: #fff;
+  border-radius: 24rpx;
+  padding: 30rpx;
+}
+.dialog-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  padding-bottom: 24rpx;
+}
+.summary-scroll {
+  max-height: 65vh;
+}
+.summary-description {
+  font-size: 24rpx;
+  margin-top: 16rpx;
+}
+.dialog-actions {
+  display: flex;
+  gap: 16rpx;
+  padding-top: 20rpx;
+}
+.dialog-actions > button {
+  flex: 1;
+  font-size: 25rpx;
+}
+.page {
+  padding-bottom: calc(42rpx + env(safe-area-inset-bottom));
+}

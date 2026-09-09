@@ -1,0 +1,25 @@
+<view class="page">
+  <view class="hero">
+    <view class="row"><text class="eyebrow">LD TENNIS · GROUP CLASS</text><button wx:if="{{canCreate}}" class="create" bindtap="createCourse">＋ 创建</button></view>
+    <view class="hero-title">{{scope === 'mine' ? '我的团课' : '公开团课'}}</view>
+    <view class="hero-sub">{{scope === 'mine' ? '报名、成班与退款进度都在这里' : '专业教练带领的小班教学，单次报名更灵活'}}</view>
+    <view class="chips"><text class="chip">精品小班</text><text class="chip">单次报名</text><text class="chip">VIP专享价</text></view>
+  </view>
+  <view class="tabs"><view class="tab {{scope === 'public' ? 'selected' : ''}}" data-scope="public" bindtap="switchScope">团课列表</view><view class="tab {{scope === 'mine' ? 'selected' : ''}}" data-scope="mine" bindtap="switchScope">我的团课</view></view>
+  <scroll-view scroll-x class="filters"><view class="filter {{!campus ? 'active' : ''}}" data-campus="" bindtap="selectCampus">全部</view><view wx:for="{{campuses}}" wx:key="id" class="filter {{campus === item.name ? 'active' : ''}}" data-campus="{{item.name}}" bindtap="selectCampus">{{item.name}}</view></scroll-view>
+  <view wx:if="{{error}}" class="error">{{error}}<view class="link" bindtap="retry">重新加载</view></view>
+  <view wx:if="{{needsAuth}}" class="card auth-card"><view class="small">登录状态由个人中心统一管理。</view><button class="primary" bindtap="goToLogin" loading="{{authorizing}}" disabled="{{authorizing}}">前往个人中心</button></view>
+  <view wx:for="{{items}}" wx:key="id" class="card" data-id="{{item.course.id}}" bindtap="openDetail">
+    <view class="row"><text class="title">{{item.course.title}}</text><text class="badge {{item.course.tone}}">{{item.course.statusLabel}}</text></view>
+    <view class="line"><text class="label">时间</text>{{item.course.timeLabel}}</view>
+    <view class="line"><text class="label">场地</text>{{item.course.campus}} · {{item.course.courtLabel}}</view>
+    <view class="line"><text class="label">教练</text>{{item.course.coachName}}</view>
+    <view class="row small muted capacity"><text>已支付 {{item.course.paidCount}} 人 · 最低 {{item.course.minParticipants}} / 上限 {{item.course.maxParticipants}} 人</text><text>余 {{item.course.remainingSeats}} 席</text></view>
+    <view class="progress-track"><view class="progress-fill" style="width:{{item.course.progress}}%"></view></view>
+    <view wx:if="{{item.myEnrollment}}" class="enrollment"><view class="row"><text class="badge {{item.myEnrollment.tone}}">{{item.myEnrollment.statusLabel}}</text><text class="small">{{item.myEnrollment.refundLabel || '本次报名实付'}} ¥{{item.myEnrollment.actualFeeYuan}}</text></view><view wx:if="{{item.myEnrollment.canCancel}}" class="notice">{{item.course.cancelDeadlineLabel}} 前可申请全额退款</view></view>
+    <view class="row"><view><text class="price">¥{{item.course.actualFeeYuan}}</text><text wx:if="{{item.course.isVip}}" class="original">¥{{item.course.priceYuan}}</text><view class="small muted">{{item.course.isVip ? 'VIP 专享价' : '单次课程价格'}}</view></view><text class="detail-link">查看详情 ›</text></view>
+  </view>
+  <view wx:if="{{!loading && !items.length && !error && !(scope === 'mine' && needsAuth)}}" class="card empty">{{scope === 'mine' ? '还没有报名记录，报名成功、退款中或已取消课程都会保留在这里。' : '课程正在准备中，新团课发布后会第一时间出现在这里。'}}</view>
+  <view wx:if="{{loading}}" class="empty">正在加载课程…</view>
+  <button wx:if="{{nextCursor && !loading}}" class="secondary" bindtap="loadMore">加载更多</button>
+</view>

@@ -1,0 +1,246 @@
+page {
+  background: #f3f8fc;
+  color: #203d53;
+  font-size: 27rpx;
+}
+.page {
+  padding: 24rpx 24rpx 48rpx;
+  box-sizing: border-box;
+  min-height: 100vh;
+}
+.hero {
+  position: relative;
+  overflow: hidden;
+  padding: 34rpx 30rpx;
+  border-radius: 24rpx;
+  background: linear-gradient(120deg, #078dce, #23aedb);
+  color: #fff;
+  margin-bottom: 24rpx;
+}
+.hero:after {
+  content: "";
+  position: absolute;
+  right: -50rpx;
+  top: -110rpx;
+  width: 320rpx;
+  height: 320rpx;
+  border: 60rpx solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.eyebrow {
+  font-size: 18rpx;
+  letter-spacing: 3rpx;
+  opacity: 0.75;
+}
+.hero-title {
+  font-size: 42rpx;
+  line-height: 1.35;
+  font-weight: 700;
+  margin: 12rpx 0;
+}
+.hero-sub {
+  font-size: 23rpx;
+  line-height: 1.7;
+  opacity: 0.9;
+}
+.chips {
+  display: flex;
+  gap: 12rpx;
+  margin-top: 22rpx;
+}
+.chip {
+  font-size: 20rpx;
+  padding: 7rpx 16rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.4);
+  border-radius: 30rpx;
+  background: rgba(255, 255, 255, 0.12);
+}
+.card {
+  background: #fff;
+  border: 1rpx solid #e5edf4;
+  border-radius: 22rpx;
+  padding: 26rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 4rpx 14rpx rgba(24, 60, 88, 0.025);
+}
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12rpx;
+}
+.title {
+  font-weight: 700;
+  font-size: 30rpx;
+  line-height: 1.5;
+}
+.section-title {
+  font-weight: 700;
+  font-size: 28rpx;
+  margin-bottom: 20rpx;
+}
+.muted {
+  color: #8c9eab;
+}
+.small {
+  font-size: 23rpx;
+  line-height: 1.7;
+}
+.badge {
+  flex-shrink: 0;
+  font-size: 20rpx;
+  padding: 7rpx 13rpx;
+  border-radius: 24rpx;
+  background: #edf4f8;
+  color: #8093a2;
+}
+.badge.blue {
+  color: #1296db;
+  background: #e8f6fd;
+}
+.badge.green {
+  color: #26895b;
+  background: #e7f7ed;
+}
+.badge.amber {
+  color: #a57126;
+  background: #fff5e2;
+}
+.badge.danger {
+  color: #bf4650;
+  background: #fff0f1;
+}
+.line {
+  margin-top: 15rpx;
+  line-height: 1.6;
+  font-size: 25rpx;
+}
+.line .label {
+  display: inline-block;
+  color: #91a2af;
+  min-width: 86rpx;
+}
+.price {
+  color: #1296db;
+  font-size: 40rpx;
+  font-weight: 750;
+}
+.price-label {
+  font-size: 22rpx;
+  margin-left: 8rpx;
+}
+.original {
+  font-size: 23rpx;
+  color: #9caab4;
+  text-decoration: line-through;
+  margin-left: 12rpx;
+}
+.progress-track {
+  height: 7rpx;
+  background: #e9f0f5;
+  border-radius: 8rpx;
+  overflow: hidden;
+  margin: 14rpx 0;
+}
+.progress-fill {
+  height: 100%;
+  background: #43bde3;
+  border-radius: 8rpx;
+}
+.primary,
+.secondary,
+.danger-button {
+  font-size: 27rpx;
+  border-radius: 17rpx;
+  font-weight: 600;
+  line-height: 1.5;
+  padding: 23rpx 18rpx;
+  margin: 0;
+}
+.primary {
+  background: #1296db;
+  color: white;
+}
+.secondary {
+  background: #eff7fc;
+  color: #138dcc;
+}
+.danger-button {
+  background: #fff1f1;
+  color: #bf4650;
+}
+.primary[disabled],
+.secondary[disabled] {
+  color: #8b9daa;
+  background: #e4ecf1;
+}
+.primary:after,
+.secondary:after,
+.danger-button:after {
+  border: 0;
+}
+.compact {
+  padding: 13rpx 22rpx;
+  font-size: 22rpx;
+  border-radius: 28rpx;
+}
+.notice {
+  background: #fff7e8;
+  color: #9a732f;
+  border-radius: 12rpx;
+  padding: 18rpx 20rpx;
+  line-height: 1.65;
+  font-size: 23rpx;
+  margin: 16rpx 0;
+}
+.error {
+  color: #bd4651;
+  background: #fff1f1;
+  border-radius: 14rpx;
+  padding: 20rpx;
+  margin-bottom: 18rpx;
+  line-height: 1.7;
+  font-size: 24rpx;
+}
+.empty {
+  text-align: center;
+  padding: 60rpx 28rpx;
+  color: #8a9eae;
+  line-height: 1.9;
+  font-size: 25rpx;
+}
+.text-body {
+  white-space: pre-wrap;
+  line-height: 1.9;
+  font-size: 26rpx;
+  color: #627e92;
+  overflow-wrap: break-word;
+}
+.link {
+  color: #1296db;
+  font-size: 24rpx;
+  padding: 14rpx 0;
+}
+.footer-space {
+  height: 200rpx;
+}
+.sticky {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.97);
+  padding: 20rpx 24rpx calc(20rpx + env(safe-area-inset-bottom));
+  border-top: 1rpx solid #e8f0f5;
+  z-index: 3;
+}
+.sticky .primary {
+  width: 100%;
+}
+.auth-card {
+  line-height: 1.8;
+}
+.auth-card .primary {
+  margin-top: 18rpx;
+}
