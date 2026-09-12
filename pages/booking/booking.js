@@ -254,7 +254,8 @@ Page({
                   status: found.status === 'free' ? 'available' : found.status,
                   text: found.status === 'free'
                     ? `${found.price}`
-                    : (found.source_type === 'COURT_RUSH' ? '畅打占用' : (found.status === 'locked' ? '已锁定' : '已预定')),
+                    : (found.source_type === 'GROUP_COURSE' ? '公开团课'
+                      : (found.source_type === 'COURT_RUSH' ? '畅打占用' : (found.status === 'locked' ? '已锁定' : '已预定'))),
                   courtNumber: order.courtNumber,
                   booked_by: found.booked_by || '',
                   isBookedByManager: isBookedByManager,
@@ -595,7 +596,8 @@ Page({
                   status: found.status === 'free' ? 'available' : found.status,
                   text: found.status === 'free'
                     ? `${found.price}`
-                    : (found.source_type === 'COURT_RUSH' ? '畅打占用' : (found.status === 'locked' ? '已锁定' : '已预定')),
+                    : (found.source_type === 'GROUP_COURSE' ? '公开团课'
+                      : (found.source_type === 'COURT_RUSH' ? '畅打占用' : (found.status === 'locked' ? '已锁定' : '已预定'))),
                   courtNumber: order.courtNumber,
                   booked_by: found.booked_by || '',
                   isBookedByManager: isBookedByManager,

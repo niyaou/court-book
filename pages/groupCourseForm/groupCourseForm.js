@@ -1,6 +1,9 @@
 const api = require("../../utils/groupCourseApi");
 const view = require("../../utils/groupCourseView");
 const PENDING_KEY = "groupCourseUnresolvedPublish";
+const timeHours = Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, "0"));
+const timeMinutes = ["00", "30"];
+const timePickerValue = (time) => time ? [Number(time.slice(0, 2)), time.slice(3) === "30" ? 1 : 0] : [0, 0];
 const initialForm = {
   templateId: "",
   title: "",
@@ -91,6 +94,9 @@ Page({
     showConfirm: false,
     summary: null,
     form: Object.assign({}, initialForm),
+    timeColumns: [timeHours, timeMinutes],
+    startTimePickerValue: [0, 0],
+    endTimePickerValue: [0, 0],
     campuses: [],
     courts: [],
     filteredCourts: [],
@@ -113,6 +119,8 @@ Page({
       this.setData({
         unresolved: true,
         summary: pending.summary,
+        startTimePickerValue: timePickerValue(parts.time),
+        endTimePickerValue: timePickerValue(view.dateParts(payload.endAt).time),
         form: Object.assign({}, initialForm, payload, {
           date: parts.date,
           startTime: parts.time,
@@ -197,6 +205,20 @@ Page({
       }),
     });
     this.updateLabels();
+  },
+  chooseTime(e) {
+    if (!this.editable()) return;
+    const field = e.currentTarget.dataset.field;
+    if (!["startTime", "endTime"].includes(field)) return;
+    const [hourIndex, minuteIndex] = e.detail.value.map(Number);
+    if (!Number.isInteger(hourIndex) || !Number.isInteger(minuteIndex) ||
+        !timeHours[hourIndex] || !timeMinutes[minuteIndex]) return;
+    this.setData({
+      form: Object.assign({}, this.data.form, {
+        [field]: `${timeHours[hourIndex]}:${timeMinutes[minuteIndex]}`,
+      }),
+      [`${field}PickerValue`]: [hourIndex, minuteIndex],
+    });
   },
   chooseCoach(e) {
     if (!this.editable()) return;
