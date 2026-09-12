@@ -25,7 +25,17 @@ function generateTimeSlots(start, end, interval) {
   return slots
 }
 
-function getPrice(court, campus, lightingFeeYuan) {
+function getPrice(court, campus, lightingFeeYuan, startTime) {
+  // 麓坊所有场地统一按半小时计价，展示普通会员价，灯光费另加。
+  if (campus === '麓坊校区') {
+    const [hour, minute] = startTime.split(':').map(Number)
+    const minutes = hour * 60 + minute
+    const isPeak = (minutes >= 9 * 60 && minutes < 12 * 60) ||
+      (minutes >= 16 * 60 && minutes < 21 * 60)
+    const basePrice = isPeak ? 90 : 60
+    return Math.round((basePrice + Number(lightingFeeYuan || 0)) * 100) / 100
+  }
+
   // 根据校区配置不同的价格
   const court_price_mapping = {
     "麓坊校区": {
@@ -280,7 +290,7 @@ exports.main = async (event, context) => {
         result.push({
           ...orderWithoutAt,
           ...(order.status === 'free' && {
-            price: getPrice(court.courtNumber, court.campus, lightingFeeByTime.get(slot.start))
+            price: getPrice(court.courtNumber, court.campus, lightingFeeByTime.get(slot.start), slot.start)
           })
         })
       } else {
@@ -319,7 +329,7 @@ exports.main = async (event, context) => {
           start_time: slot.start,
           end_time: slot.end,
           status,
-          price: getPrice(court.courtNumber, court.campus, lightingFeeByTime.get(slot.start)),
+          price: getPrice(court.courtNumber, court.campus, lightingFeeByTime.get(slot.start), slot.start),
           isPastTime:isPastTime,
           ...(court_id && { court_id }),
           ...(booked_by && { booked_by })
