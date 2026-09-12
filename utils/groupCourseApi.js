@@ -1,6 +1,10 @@
 const { pickStoredUserProfile } = require("./userProfile");
 let serverOffset = 0;
 const AUTH_ERRORS = ["AUTH_REQUIRED"];
+const DISPLAY_ERRORS = {
+  INVALID_PRICE: "原价和优惠金额须为至少1元的整数，优惠金额不得高于原价",
+  VIP_UNAVAILABLE: "课程价格暂时无法查询，请稍后重试",
+};
 // Business identity is the same phoneNumber used by the personal center and rush.
 // Read current shared data on every request so login changes take effect immediately.
 function loginIdentity() {
@@ -76,7 +80,7 @@ async function call(action, input) {
     if (identity.phoneNumber && ["AUTH_REQUIRED", "AUTH_INVALID", "AUTH_EXPIRED"].includes(result.error)) {
       throw error("LOGIN_CONTRACT_MISMATCH", "已读取个人中心手机号，但团课服务未识别。请更新团课云函数后重试，无需重新登录", true);
     }
-    const failure = error(result.error, result.message, result.retryable);
+    const failure = error(result.error, DISPLAY_ERRORS[result.error] || result.message, result.retryable);
     failure.details = result.details;
     throw failure;
   }

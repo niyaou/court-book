@@ -56,7 +56,7 @@ function validate(form, now) {
   if (!Number.isSafeInteger(priceYuan) || priceYuan < 1 || !Number.isSafeInteger(priceYuan * 100))
     throw new Error("原价须为至少1元的整数，且金额不能过大");
   if (!Number.isSafeInteger(vipPriceYuan) || vipPriceYuan < 1 || vipPriceYuan > priceYuan)
-    throw new Error("请填写VIP实付金额，须为至少1元且不高于原价的整数");
+    throw new Error("请填写优惠金额，须为至少1元且不高于原价的整数");
   if (
     !Number.isSafeInteger(minParticipants) ||
     !Number.isSafeInteger(maxParticipants) ||

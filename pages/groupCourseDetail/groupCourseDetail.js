@@ -162,7 +162,7 @@ Page({
       const c = this.data.course;
       const accepted = await confirm({
         title: "确认本人报名",
-        content: `手机号：${this.data.viewer.phoneNumber}\n${c.title}\n${c.timeLabel}\n本次支付 ¥${c.actualFeeYuan}${c.isVip ? "（VIP价）" : ""}\n名额保留3分钟，请在2分钟内完成支付。`,
+        content: `手机号：${this.data.viewer.phoneNumber}\n${c.title}\n${c.timeLabel}\n本次支付 ¥${c.actualFeeYuan}\n名额保留3分钟，请在2分钟内完成支付。`,
         confirmText: "确认报名",
       });
       if (!accepted) return;
