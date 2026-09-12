@@ -376,13 +376,13 @@ page {
 
 /* 活动来源仅决定展示，避免被管理员/VIP 等占用样式覆盖。 */
 .court-status-item.rush-booked {
-  color: #183247;
+  color: #55585c;
   border-color: transparent;
   background: #f2dc55;
 }
 
 .court-status-item.group-course-booked {
-  color: #183247;
+  color: #fff;
   border-color: transparent;
   background: #59aed7;
 }
