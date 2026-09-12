@@ -107,7 +107,16 @@ async function getVipInfo(phoneNumber) {
   }
 }
 
-function getBasePrice(court, campus) {
+function getBasePrice(court, campus, startTime, isVip) {
+  // 麓坊所有场地统一按半小时计价；VIP 身份沿用服务端查询结果。
+  if (campus === '麓坊校区') {
+    const [hour, minute] = startTime.split(':').map(Number)
+    const minutes = hour * 60 + minute
+    const isPeak = (minutes >= 9 * 60 && minutes < 12 * 60) ||
+      (minutes >= 16 * 60 && minutes < 21 * 60)
+    return isPeak ? (isVip ? 75 : 90) : (isVip ? 50 : 60)
+  }
+
   const courtPriceMapping = {
     "麓坊校区": {
       "1号风雨棚": 90,
@@ -138,14 +147,6 @@ function getBasePrice(court, campus) {
 
   const campusPrices = courtPriceMapping[campus] || courtPriceMapping["麓坊校区"]
   return campusPrices[court] || 60
-}
-
-function getVipBasePrice(court, campus, basePrice, isVip) {
-  if (!isVip || campus !== "麓坊校区") return basePrice
-  if (court.includes("红土")) return 75
-  if (court.includes("室外")) return 40
-  if (court.includes("风雨棚")) return 75
-  return basePrice
 }
 
 function parseCourtId(courtId) {
@@ -182,8 +183,7 @@ function calculateTotalFee(courtInfos, campus, isVip, pricedSlots) {
   let total = 0
   for (let index = 0; index < courtInfos.length; index += 1) {
     const info = courtInfos[index]
-    const basePrice = getBasePrice(info.court, campus)
-    const finalBasePrice = getVipBasePrice(info.court, campus, basePrice, isVip)
+    const finalBasePrice = getBasePrice(info.court, campus, info.start_time, isVip)
     total += finalBasePrice + Number(pricedSlots[index].lighting_fee_yuan || 0)
   }
   return Math.round(total * 100) / 100
