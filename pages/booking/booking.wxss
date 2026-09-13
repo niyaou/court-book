@@ -290,13 +290,18 @@ page {
   background: #fff;
 }
 
+.time-item,
+.court-slot-row {
+  box-sizing: border-box;
+  flex-shrink: 0;
+  height: 82rpx;
+  padding-bottom: 10rpx;
+}
+
 .time-item {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  box-sizing: border-box;
-  height: 82rpx;
-  padding-bottom: 10rpx;
   font-size: 24rpx;
   color: #526d82;
   line-height: 1.2;
@@ -318,7 +323,11 @@ page {
   width: 142rpx;
 }
 
-/* 72rpx 色块 + 10rpx 留白，与时间列的 82rpx 行高一致。 */
+/* 与时间列共用外层行高，避免不同 rpx 分别取整导致逐行错位。 */
+.court-slot-row {
+  width: 142rpx;
+}
+
 .court-status-item {
   display: flex;
   align-items: center;
@@ -326,8 +335,8 @@ page {
   flex-shrink: 0;
   box-sizing: border-box;
   width: 132rpx;
-  height: 72rpx;
-  margin: 0 10rpx 10rpx 0;
+  height: 100%;
+  margin: 0 10rpx 0 0;
   border: 1rpx solid transparent;
   border-radius: 12rpx;
   color: #183247;
