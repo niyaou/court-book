@@ -1016,7 +1016,9 @@ function createService({
   }
   async function maintenance(event, context) {
     // Distinguish a client invocation from the scheduler, not a user identity check.
-    if (context.OPENID || event.Type !== "Timer") fail("FORBIDDEN");
+    // CloudBase sends "timer"; retain "Timer" for existing test invocations.
+    if (context.OPENID || !["timer", "Timer"].includes(event?.Type))
+      fail("FORBIDDEN");
     const [published, confirmed, cancelled, pending, allRefunds] =
       await Promise.all([
         repo.scan(C.course, { status: "PUBLISHED" }),

@@ -348,6 +348,34 @@ test("maintenance reaches beyond first 50 courses and rejects client clocks", as
     (e) => e.code === "FORBIDDEN",
   );
 });
+test("CloudBase lowercase timer settles courses and still rejects client invocations", async () => {
+  const f = await published();
+  const c = await f.repo.get(C.course, f.id);
+  f.now = c.startAt.getTime() - 57 * MINUTE;
+  const event = {
+    Type: "timer",
+    TriggerName: "groupCourseEveryMinute",
+    Time: new Date(f.now).toISOString(),
+    Message: "",
+    tcbContext: {},
+    userInfo: {},
+  };
+  await assert.rejects(
+    () => f.service.maintenance(event, { OPENID: "attacker" }),
+    (e) => e.code === "FORBIDDEN",
+  );
+  assert.equal((await f.repo.get(C.course, f.id)).status, "PUBLISHED");
+  for (const invalid of [{}, { Type: "http" }, null]) {
+    await assert.rejects(
+      () => f.service.maintenance(invalid, {}),
+      (e) => e.code === "FORBIDDEN",
+    );
+  }
+  await f.service.maintenance(event, {});
+  const cancelled = await f.repo.get(C.course, f.id);
+  assert.equal(cancelled.status, "CANCELLED");
+  assert.equal(cancelled.cancelReason, "MIN_PARTICIPANTS_NOT_MET");
+});
 test("stable repository pagination reads all >100 records", async () => {
   const rows = Array.from({ length: 215 }, (_, i) => ({
     _id: String(i).padStart(3, "0"),
