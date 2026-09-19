@@ -174,7 +174,11 @@ Page({
       courtLabel: court ? view.courtLabel(court.courtNumber) : "选择场地",
       filteredCourts: this.data.courts.filter(
         (item) => item.campus === f.campus,
-      ).map((item) => ({ ...item, label: view.courtLabel(item.courtNumber) })),
+      ).sort((a, b) => {
+        const left = String(a.courtNumber);
+        const right = String(b.courtNumber);
+        return left < right ? -1 : left > right ? 1 : 0;
+      }).map((item) => ({ ...item, label: view.courtLabel(item.courtNumber) })),
     });
   },
   editable() {

@@ -482,12 +482,120 @@ test("VIP amount returned by enrollment is shown before WeChat payment", async (
     hasProfile: () => true,
     call: async () => ({ enrollment: { id: "e", status: "PENDING_PAYMENT", actualFeeYuan: 80, isVip: true }, payment: { expiresAt: now + 120000, paymentParams: {} } }),
   }), {
-    showModal: options => { dialogs.push(options.content); options.success({ confirm: true }); },
-    requestPayment: options => { assert.equal(dialogs.length, 2); assert.match(dialogs[1], /80/); payments++; options.success({}); },
+    requestPayment: options => { assert.equal(dialogs.length, 2); assert.equal(dialogs[1].amount, 80); payments++; options.success({}); },
   });
   page.setData({ courseId: "c", viewer: { phoneNumber: "13800000000" }, course: { status: "PUBLISHED", canEnroll: true, title: "课程", actualFeeYuan: 100 } });
   page.loadDetail = async () => {};
+  const open = page.confirmPayment.bind(page);
+  page.confirmPayment = options => {
+    const pending = open(options);
+    dialogs.push(page.data.paymentConfirmation);
+    assert.equal(JSON.stringify(page.data.paymentConfirmation).includes("13800000000"), false);
+    page.acceptPaymentConfirmation();
+    return pending;
+  };
   await page.enroll();
   assert.equal(payments, 1);
   assert.equal(page.data.enrollment.actualFeeYuan, 80);
+});
+
+test("pagination appends 20 at a time and resets cursor for campus and scope changes", async () => {
+  const calls = [];
+  const { page } = loadPage("groupCourse", fakeApi({
+    call: async (action, input) => {
+      calls.push({ action, ...input });
+      return {
+        viewer: { authenticated: true }, nextCursor: input.cursor ? null : "next-page",
+        items: Array.from({ length: 20 }, (_, i) => ({
+          course: { id: `${input.scope}-${input.campus}-${input.cursor || 'first'}-${i}`, startAt: now, endAt: now + 3600000 },
+        })),
+      };
+    },
+  }));
+  page.onLoad();
+  await page.loadList(false);
+  await page.loadList(true);
+  assert.equal(page.data.items.length, 40);
+  assert.equal(new Set(page.data.items.map(x => x.id)).size, 40);
+  assert.equal(calls[1].cursor, "next-page");
+  await page.loadList(true);
+  assert.equal(calls.length, 2);
+  page.selectCampus({ currentTarget: { dataset: { campus: "东区" } } });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(page.data.items.length, 20);
+  assert.equal(calls[2].campus, "东区");
+  assert.equal(calls[2].cursor, undefined);
+  page.switchScope({ currentTarget: { dataset: { scope: "mine" } } });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(calls[3].scope, "mine");
+  assert.equal(calls[3].campus, "东区");
+  assert.equal(calls[3].cursor, undefined);
+  assert.equal(page.data.items.length, 20);
+  assert.ok(calls.every(x => x.pageSize === 20));
+});
+
+test("continued payment requires refund-policy acceptance and rechecks payment expiry", async () => {
+  for (const choice of ["cancel", "accept", "expire"]) {
+    let payments = 0;
+    const { page } = loadPage("groupCourseDetail", fakeApi(), {
+      requestPayment: options => { payments++; options.success({}); },
+    });
+    page.setData({
+      course: { status: "PUBLISHED", cancelDeadlineAt: now },
+      enrollment: { status: "PENDING_PAYMENT", actualFeeYuan: 80, isVip: true },
+      payment: { expiresAt: now + 120000, paymentParams: {} },
+    });
+    page.loadDetail = async () => {};
+    const pending = page.continuePayment();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(page.data.paymentConfirmation.amount, 80);
+    assert.equal(page.data.paymentConfirmation.isVip, true);
+    if (choice === "expire") page.data.payment.expiresAt = now;
+    if (choice === "cancel") page.dismissPaymentConfirmation();
+    else page.acceptPaymentConfirmation();
+    await pending;
+    assert.equal(page.data.paymentConfirmation, null);
+    assert.equal(payments, choice === "accept" ? 1 : 0);
+  }
+});
+
+
+test("payment dialog stays unchanged across refund deadline and cancels on unload", async () => {
+  let current = now;
+  const { page } = loadPage("groupCourseDetail", fakeApi({ now: () => current }));
+  page.setData({ course: { title: "测试课程", cancelDeadlineAt: now + 1000 } });
+  const pending = page.confirmPayment({ amount: 2 });
+  const initial = JSON.stringify(page.data.paymentConfirmation);
+  current += 1000;
+  assert.equal(JSON.stringify(page.data.paymentConfirmation), initial);
+  assert.equal(page.data.paymentConfirmation.refundClosed, undefined);
+  page.acceptPaymentConfirmation();
+  assert.equal(await pending, true);
+  const leaving = page.confirmPayment({ amount: 2 });
+  page.onUnload();
+  assert.equal(await leaving, false);
+  assert.equal(page._paymentConfirmationResolve, null);
+});
+
+test("paid attendee gallery paginates independently and falls back for broken avatars", async () => {
+  const calls = [];
+  const { page } = loadPage('groupCourseDetail', fakeApi({
+    call: async (action, input) => {
+      calls.push(input);
+      return { course: { status: 'PUBLISHED', startAt: now },
+        paidParticipants: [{ id: input.paidParticipantCursor ? 'b' : 'a', nickName: '学员', avatarUrl: 'cloud://avatar' }],
+        paidParticipantNextCursor: input.paidParticipantCursor ? null : 'next',
+      };
+    },
+  }));
+  page.setData({ courseId: 'course' });
+  await page.loadDetail();
+  await page.loadDetail(false, true);
+  assert.deepEqual(Array.from(page.data.paidParticipants, p => p.id), ['a', 'b']);
+  assert.equal(calls[1].paidParticipantCursor, 'next');
+  assert.equal(calls[1].participantCursor, undefined);
+  page.participantAvatarError({ currentTarget: { dataset: { id: 'a' } } });
+  assert.equal(page.data.paidParticipants[0].avatarUrl, '');
+  await page.loadDetail();
+  assert.equal(page.data.paidParticipants.length, 1);
 });

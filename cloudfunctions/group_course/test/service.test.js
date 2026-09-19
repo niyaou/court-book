@@ -719,3 +719,226 @@ test("default courts publish without booking writes and enforce coach and campus
   assert.equal((await f.repo.scan(C.slot)).length, 0);
   assert.equal((await f.publish({ ...second, coachId: "coach3", courtId: "west-real", publishRequestId: "request_third_123456789" })).success, true);
 });
+
+test("list pages by 20 after role, campus and own-enrollment filtering, including settlement", async () => {
+  for (const phone of [null, "user", "vip", "admin"]) {
+    const f = await published();
+    const base = await f.repo.get(C.course, f.id);
+    for (let i = 0; i < 46; i++) {
+      const id = `page-${String(i).padStart(2, "0")}`;
+      await f.repo.set(C.course, id, {
+        ...base, campus: "分页校区", startAt: new Date(f.now + (i < 5 ? 30 : 600) * MINUTE),
+        endAt: new Date(f.now + 700 * MINUTE),
+      });
+      for (const owner of ["user", "vip", "admin"]) {
+        await f.repo.set(C.enrollment, `${owner}-${id}`, {
+          courseId: id, phoneNumber: owner, status: "EXPIRED",
+          createdAt: new Date(f.now + i), attemptStartedAt: new Date(f.now),
+          originalPriceYuan: 101, actualFeeYuan: owner === "vip" ? 67 : 101,
+        });
+      }
+    }
+    const scopes = phone ? ["public", "mine"] : ["public"];
+    for (const scope of scopes) {
+      let cursor;
+      const ids = [], sizes = [];
+      do {
+        const r = await f.request(phone, "list", { scope, campus: "分页校区", cursor });
+        assert.equal(r.success, true);
+        sizes.push(r.data.items.length);
+        for (const item of r.data.items) {
+          ids.push(item.course.id);
+          assert.equal(item.course.campus, "分页校区");
+          assert.equal(item.course.actualFeeYuan, phone === "vip" ? 67 : 101);
+          if (scope === "public" && phone !== "admin") assert.notEqual(item.course.status, "CANCELLED");
+          if (scope === "mine") assert.equal(item.myEnrollment.id, `${phone}-${item.course.id}`);
+        }
+        cursor = r.data.nextCursor;
+      } while (cursor);
+      const count = scope === "public" && phone !== "admin" ? 41 : 46;
+      assert.deepEqual(sizes, [20, 20, count - 40]);
+      assert.equal(new Set(ids).size, count);
+    }
+    assert.equal((await f.request(phone, "list", { scope: "public", pageSize: "20" })).error, "INVALID_ARGUMENT");
+  }
+});
+
+test("paid attendee gallery exposes only names and avatars, with 20-item pages for every role", async () => {
+  const f = await published();
+  for (let i = 0; i < 25; i++) {
+    await f.repo.set(C.enrollment, `gallery-${i.toString().padStart(2, '0')}`, {
+      courseId: f.id, phoneNumber: `private-${i}`, nickName: `学员${i}`,
+      avatarUrl: `cloud://test/avatar-${i}`, status: "PAID", actualFeeYuan: 67,
+      createdAt: new Date(f.now + i), paidAt: new Date(f.now), attemptStartedAt: new Date(f.now),
+    });
+  }
+  for (const status of ["PENDING_PAYMENT", "EXPIRED", "REFUNDING", "REFUND_FAILED", "CANCELLED"]) {
+    await f.repo.set(C.enrollment, status, { courseId: f.id, phoneNumber: status, status, createdAt: new Date(f.now), attemptStartedAt: new Date(f.now) });
+  }
+  for (const phone of [null, 'user', 'vip', 'admin']) {
+    const first = await f.request(phone, 'detail', { courseId: f.id });
+    assert.equal(first.success, true);
+    assert.equal(first.data.paidParticipants.length, 20);
+    for (const p of first.data.paidParticipants) {
+      assert.deepEqual(Object.keys(p).sort(), ['avatarUrl', 'id', 'nickName']);
+      assert.match(p.nickName, /^学员/);
+      assert.match(p.avatarUrl, /^cloud:\/\//);
+    }
+    const last = await f.request(phone, 'detail', { courseId: f.id, paidParticipantCursor: first.data.paidParticipantNextCursor });
+    assert.equal(last.data.paidParticipants.length, 5);
+    assert.equal(last.data.paidParticipantNextCursor, null);
+    assert.equal(new Set([...first.data.paidParticipants, ...last.data.paidParticipants].map(p => p.id)).size, 25);
+    if (phone !== 'admin') assert.equal(first.data.participants, undefined);
+  }
+  const en = await f.repo.get(C.enrollment, 'gallery-00');
+  await f.repo.set(C.enrollment, en._id, { ...en, status: 'REFUNDING' });
+  const refreshed = await f.request('user', 'detail', { courseId: f.id });
+  assert.ok(refreshed.data.paidParticipants.every(p => p.id !== en._id));
+});
+
+test("refund mismatch diagnostics distinguish missing schema, wrong order and wrong amount without exposing response values", () => {
+  const p = { outTradeNo: 'expected-payment' };
+  const r = { outRefundNo: 'expected-refund', amountYuan: 2 };
+  const valid = { returnCode: 'SUCCESS', resultCode: 'SUCCESS', outTradeNo: p.outTradeNo,
+    outRefundNo0: r.outRefundNo, refundFee0: 200, refundStatus0: 'SUCCESS' };
+  for (const [raw, matches, paymentMatches, fee] of [
+    [{ ...valid, outRefundNo0: 'different' }, false, true, null],
+    [{ ...valid, outTradeNo: 'different' }, true, false, 200],
+    [{ ...valid, refundFee0: 1 }, true, true, 1],
+    [{ returnCode: 'SUCCESS', resultCode: 'SUCCESS', outTradeNo: p.outTradeNo,
+      refunds: [{ outRefundNo: 'private-refund', account: 'private-account' }] }, false, true, null],
+  ]) {
+    assert.throws(() => refundResult(raw, r, p), error => {
+      assert.equal(error.code, 'REFUND_RESPONSE_MISMATCH');
+      assert.equal(error.details.refundMatched, matches);
+      assert.equal(error.details.paymentMatched, paymentMatches);
+      assert.equal(error.details.expectedRefundFee, 200);
+      assert.equal(error.details.receivedRefundFee, fee);
+      assert.ok(!JSON.stringify(error.details).includes('private-account'));
+      assert.ok(!JSON.stringify(error.details).includes('private-refund'));
+      if (raw.refunds) assert.deepEqual(error.details.nestedFields.refunds.fields, ['account', 'outRefundNo']);
+      return true;
+    });
+  }
+  assert.equal(refundResult(valid, r, p).state, 'SUCCESS');
+});
+
+test("CloudPay parallel refund lists select the exact refund and keep order/amount checks", () => {
+  const p = { outTradeNo: 'payment' }, r = { outRefundNo: 'target', amountYuan: 2 };
+  const response = {
+    returnCode: 'SUCCESS', resultCode: 'SUCCESS', outTradeNo: 'payment',
+    outRefundNoList: ['other', 'target'], refundFeeList: [999, 200],
+    refundStatusList: ['PROCESSING', 'SUCCESS'], refundIdList: ['other-id', 'target-id'],
+  };
+  assert.deepEqual(refundResult(response, r, p), {
+    state: 'SUCCESS', channelStatus: 'SUCCESS', refundId: 'target-id', code: '',
+  });
+  assert.equal(refundResult({
+    return_code: 'SUCCESS', result_code: 'SUCCESS', out_trade_no: 'payment',
+    out_refund_no_list: ['target'], refund_fee_list: ['200'],
+    refund_status_list: ['SUCCESS'], refund_id_list: ['wx-refund'],
+  }, r, p).state, 'SUCCESS');
+  for (const patch of [
+    { outTradeNo: 'wrong-payment' }, { outRefundNoList: ['other'] },
+    { refundFeeList: [200, 999] }, { refundFeeList: [200] },
+    { refundFeeList: null }, { outRefundNoList: [] },
+  ]) assert.throws(() => refundResult({ ...response, ...patch }, r, p), /REFUND_RESPONSE_MISMATCH/);
+  assert.equal(refundResult({ ...response, refundStatusList: ['SUCCESS', 'PROCESSING'] }, r, p).state, 'PROCESSING');
+  assert.equal(refundResult({ ...response, refundStatusList: ['SUCCESS', 'CHANGE'] }, r, p).state, 'FAILED');
+  assert.equal(refundResult({ ...response, refundStatusList: ['SUCCESS'] }, r, p).state, 'UNKNOWN');
+});
+
+test("refund callback and maintenance reconcile CloudPay list responses idempotently", async () => {
+  const { createGateway } = require('../lib/gateway');
+  for (const route of ['callback', 'maintenance']) {
+    const f = await published();
+    const { p, en } = await paid(f);
+    await f.request('user', 'cancelEnrollment', { courseId: f.id });
+    const r = (await f.repo.scan(C.refund))[0];
+    await f.repo.set(C.refund, r._id, { ...r, status: 'PROCESSING', nextAction: 'QUERY' });
+    let submissions = 0;
+    const gateway = createGateway({ cloudPay: {
+      queryRefund: async () => ({
+        returnCode: 'SUCCESS', resultCode: 'SUCCESS', outTradeNo: p.outTradeNo,
+        outRefundNoList: ['another-refund', r.outRefundNo],
+        refundFeeList: [1, r.amountYuan * 100],
+        refundStatusList: ['PROCESSING', 'SUCCESS'], refundIdList: ['other', 'wx-refund'],
+      }),
+      refund: async () => { submissions++; throw Error('must not resubmit'); },
+    } });
+    f.gateway.queryRefund = gateway.queryRefund;
+    f.gateway.submitRefund = gateway.submitRefund;
+    if (route === 'callback') {
+      assert.equal((await f.service.refundCallback({ outRefundNo: r.outRefundNo })).errcode, 0);
+    } else {
+      await f.service.maintenance({ Type: 'timer' }, {});
+    }
+    const success = await f.repo.get(C.refund, r._id);
+    assert.equal(success.status, 'SUCCESS');
+    assert.equal(success.nextRetryAt, null);
+    assert.equal(success.wxRefundId, 'wx-refund');
+    assert.equal((await f.repo.get(C.enrollment, en._id)).status, 'CANCELLED');
+    assert.equal((await f.request('user', 'detail', { courseId: f.id })).data.course.occupiedCount, 0);
+    await f.service.refundCallback({ outRefundNo: r.outRefundNo });
+    await f.service.maintenance({ Type: 'timer' }, {});
+    assert.deepEqual((await f.repo.get(C.refund, r._id)).succeededAt, success.succeededAt);
+    assert.equal((await f.repo.scan(C.refund)).length, 1);
+    assert.equal(submissions, 0);
+  }
+});
+
+test("nested refund list diagnostics survive JSON logging without disclosing identifiers", () => {
+  const r = { outRefundNo: 'private-target', amountYuan: 2 };
+  const raw = { returnCode: 'SUCCESS', resultCode: 'SUCCESS', outTradeNo: 'private-pay',
+    outRefundNoList: [{ outRefundNo: r.outRefundNo }],
+    refundFeeList: [{ refundFee: 200 }], refundStatusList: [{ refundStatus: 'SUCCESS' }],
+    refundIdList: [{ refundId: 'private-channel-id' }],
+    refund_fee_0: 200, refund_status_0: 'SUCCESS', out_refund_no_0: 'private-target',
+    sign: 'private-signature', refundRecvAccoutList: ['private-account'],
+  };
+  assert.throws(() => refundResult(raw, r, { outTradeNo: 'private-pay' }), error => {
+    const serialized = JSON.stringify(error.details);
+    const details = JSON.parse(serialized);
+    assert.equal(details.parserVersion, 'refund-lists-diagnostic-v2');
+    assert.equal(details.rawResponse.refund_fee_0, 200);
+    assert.equal(details.rawResponse.refund_status_0, 'SUCCESS');
+    assert.equal(details.rawResponse.out_refund_no_0, '[REDACTED]');
+    assert.deepEqual(details.rawResponse.refundFeeList, [{ refundFee: 200 }]);
+    assert.equal(details.rawResponse.sign, '[REDACTED]');
+    assert.deepEqual(Object.keys(details.rawResponse), Object.keys(raw));
+    assert.equal(details.refundLists.outRefundNoList.entries[0].entries.outRefundNo.matchesRefundNo, true);
+    assert.equal(details.refundLists.refundFeeList.entries[0].entries.refundFee.value, 200);
+    assert.equal(details.refundLists.refundStatusList.entries[0].entries.refundStatus.status, 'SUCCESS');
+    assert.ok(!serialized.includes('private-'));
+    return true;
+  });
+});
+
+test("empty refund detail lists query by payment once without resubmitting or relaxing verification", async () => {
+  const { createGateway } = require('../lib/gateway');
+  const p = { outTradeNo: 'payment' }, r = { outRefundNo: 'refund', amountYuan: 2 };
+  const empty = { returnCode: 'SUCCESS', resultCode: 'SUCCESS', outTradeNo: p.outTradeNo,
+    refundCount: 0, outRefundNoList: [], refundFeeList: [], refundStatusList: [], refundIdList: [] };
+  const valid = { ...empty, refundCount: 1, outRefundNoList: ['refund'], refundFeeList: [200],
+    refundStatusList: ['SUCCESS'], refundIdList: ['wx'] };
+  for (const response of [valid, empty, { ...valid, refundFeeList: [1] },
+    { ...valid, outRefundNoList: ['other'] },
+    { returnCode: 'SUCCESS', resultCode: 'FAIL', errCode: 'REFUNDNOTEXIST' }]) {
+    const calls = [];
+    const gateway = createGateway({ cloudPay: { queryRefund: async args => {
+      calls.push(args); return calls.length === 1 ? empty : response;
+    } } });
+    if (response === valid) assert.equal((await gateway.queryRefund(r, p)).state, 'SUCCESS');
+    else if (response.errCode) assert.equal((await gateway.queryRefund(r, p)).state, 'UNKNOWN');
+    else await assert.rejects(gateway.queryRefund(r, p), error => {
+      assert.equal(error.code, 'REFUND_RESPONSE_MISMATCH');
+      assert.equal(error.details.queryMode, 'outTradeNo-after-empty-outRefundNo');
+      return true;
+    });
+    assert.equal(calls.length, 2);
+    assert.equal(calls[0].outRefundNo, 'refund');
+    assert.equal(calls[1].outRefundNo, undefined);
+    assert.equal(calls[1].outTradeNo, 'payment');
+    assert.equal(calls[1].offset, 0);
+  }
+});

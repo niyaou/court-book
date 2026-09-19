@@ -20,6 +20,8 @@ Page({
     viewer: {},
     canManage: false,
     participants: [],
+    paidParticipants: [],
+    paidParticipantNextCursor: null,
     participantNextCursor: null,
     refundSummary: null,
     loading: false,
@@ -29,6 +31,7 @@ Page({
     needsAuth: false,
     holdLabel: "",
     canPay: false,
+    paymentConfirmation: null,
   },
   onLoad(options) {
     this._unwatchPermissions = api.watchPermissions(() => { this.syncPermission(); this.loadDetail(); });
@@ -48,6 +51,8 @@ Page({
     this.stopTimer();
   },
   onUnload() {
+    this._unloaded = true;
+    this.finishPaymentConfirmation(false);
     if (this._unwatchPermissions) this._unwatchPermissions();
     this.stopTimer();
   },
@@ -84,7 +89,8 @@ Page({
     )
       this.loadDetail();
   },
-  async loadDetail(append) {
+  async loadDetail(append, appendPaid) {
+    if (this._unloaded) return;
     if (!this.data.courseId || this.data.loading) return;
     this._lastPoll = api.now();
     this.setData({ loading: true });
@@ -93,6 +99,7 @@ Page({
         courseId: this.data.courseId,
         participantCursor: append ? this.data.participantNextCursor : undefined,
         participantPageSize: 20,
+        paidParticipantCursor: appendPaid ? this.data.paidParticipantNextCursor : undefined,
       });
       const participants = (data.participants || []).map((p) =>
         Object.assign({}, p, {
@@ -116,6 +123,10 @@ Page({
           ? this.data.participants.concat(participants)
           : participants,
         participantNextCursor: data.participantNextCursor || null,
+        paidParticipants: appendPaid
+          ? this.data.paidParticipants.concat(data.paidParticipants || [])
+          : (data.paidParticipants || []),
+        paidParticipantNextCursor: data.paidParticipantNextCursor || null,
         refundSummary: data.refundSummary || null,
         error: "",
       });
@@ -144,6 +155,8 @@ Page({
         enrollment: null,
         payment: null,
         participants: [],
+        paidParticipants: [],
+        paidParticipantNextCursor: null,
         refundSummary: null,
       });
     this.setData(patch);
@@ -152,6 +165,33 @@ Page({
     wx.setStorageSync("postLoginRedirect", { page: "groupCourseDetail", courseId: this.data.courseId || "" });
     wx.switchTab({ url: "/pages/member/member" });
   },
+  confirmPayment(options) {
+    const c = this.data.course;
+    return new Promise((resolve) => {
+      this._paymentConfirmationResolve = resolve;
+      this.setData({ paymentConfirmation: {
+        ...options,
+        courseTitle: c.title,
+        time: c.timeLabel,
+        campus: c.campus,
+        court: c.courtLabel,
+      } });
+    });
+  },
+  finishPaymentConfirmation(accepted) {
+    const resolve = this._paymentConfirmationResolve;
+    if (!resolve) return;
+    this._paymentConfirmationResolve = null;
+    if (!this._unloaded) this.setData({ paymentConfirmation: null });
+    resolve(accepted);
+  },
+  acceptPaymentConfirmation() {
+    this.finishPaymentConfirmation(true);
+  },
+  dismissPaymentConfirmation() {
+    this.finishPaymentConfirmation(false);
+  },
+  preventBackgroundScroll() {},
   async enroll() {
     // Match rush enrollment: reuse global profile; complete missing data in member center.
     if (!api.hasAuth() || !api.hasProfile()) { this.goToLogin(); return; }
@@ -160,9 +200,8 @@ Page({
     this.setData({ busy: true, error: "", notice: "" });
     try {
       const c = this.data.course;
-      const accepted = await confirm({
-        title: "确认本人报名",
-        content: `手机号：${this.data.viewer.phoneNumber}\n${c.title}\n${c.timeLabel}\n本次支付 ¥${c.actualFeeYuan}\n名额保留3分钟，请在2分钟内完成支付。`,
+      const accepted = await this.confirmPayment({
+        title: "确认报名", amount: c.actualFeeYuan, isVip: c.isVip,
         confirmText: "确认报名",
       });
       if (!accepted) return;
@@ -172,10 +211,10 @@ Page({
         payment: result.payment,
       });
       if (result.enrollment.actualFeeYuan !== c.actualFeeYuan) {
-        const acceptPrice = await confirm({
-          title: "报名价格已更新",
-          content: `服务端确认本次实付为 ¥${result.enrollment.actualFeeYuan}，是否继续支付？`,
-          confirmText: "继续支付",
+        const acceptPrice = await this.confirmPayment({
+          title: "报名价格已更新", amount: result.enrollment.actualFeeYuan,
+          isVip: result.enrollment.isVip, confirmText: "继续支付",
+          priceUpdated: true,
         });
         if (!acceptPrice) return;
       }
@@ -184,9 +223,9 @@ Page({
       this.showError(e);
     } finally {
       const error = this.data.error;
-      this.setData({ busy: false });
+      if (!this._unloaded) this.setData({ busy: false });
       await this.loadDetail();
-      if (error) this.setData({ error });
+      if (error && !this._unloaded) this.setData({ error });
     }
   },
   async pay(payment) {
@@ -230,16 +269,22 @@ Page({
       if (
         acceptsPayment(this.data.course) &&
         this.data.enrollment &&
-        this.data.enrollment.status === "PENDING_PAYMENT"
-      )
-        await this.pay(this.data.payment);
+        this.data.enrollment.status === "PENDING_PAYMENT" &&
+        this.data.payment && this.data.payment.expiresAt > api.now()
+      ) {
+        const accepted = await this.confirmPayment({
+          title: "确认继续付款", amount: this.data.enrollment.actualFeeYuan,
+          isVip: this.data.enrollment.isVip, confirmText: "继续支付",
+        });
+        if (accepted) await this.pay(this.data.payment);
+      }
     } catch (e) {
       this.showError(e);
     } finally {
       const error = this.data.error;
-      this.setData({ busy: false });
+      if (!this._unloaded) this.setData({ busy: false });
       await this.loadDetail();
-      if (error) this.setData({ error });
+      if (error && !this._unloaded) this.setData({ error });
     }
   },
   async cancelEnrollment() {
@@ -265,9 +310,9 @@ Page({
       this.showError(e);
     } finally {
       const error = this.data.error;
-      this.setData({ busy: false });
+      if (!this._unloaded) this.setData({ busy: false });
       await this.loadDetail();
-      if (error) this.setData({ error });
+      if (error && !this._unloaded) this.setData({ error });
     }
   },
   async cancelCourse() {
@@ -290,13 +335,21 @@ Page({
       this.showError(e);
     } finally {
       const error = this.data.error;
-      this.setData({ busy: false });
+      if (!this._unloaded) this.setData({ busy: false });
       await this.loadDetail();
-      if (error) this.setData({ error });
+      if (error && !this._unloaded) this.setData({ error });
     }
   },
   loadParticipants() {
     if (this.data.participantNextCursor) this.loadDetail(true);
+  },
+  loadPaidParticipants() {
+    if (this.data.paidParticipantNextCursor) this.loadDetail(false, true);
+  },
+  participantAvatarError(e) {
+    const field = e.currentTarget.dataset.group === "admin" ? "participants" : "paidParticipants";
+    const id = e.currentTarget.dataset.id;
+    this.setData({ [field]: this.data[field].map((p) => p.id === id ? { ...p, avatarUrl: "" } : p) });
   },
   refresh() {
     this.loadDetail();

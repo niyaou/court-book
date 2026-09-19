@@ -49,3 +49,87 @@
 .admin-note {
   margin-top: 20rpx;
 }
+.payment-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28rpx;
+  background: rgba(15, 40, 61, 0.55);
+}
+.payment-dialog {
+  width: 100%;
+  max-width: 680rpx;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 28rpx;
+  overflow: hidden;
+}
+.payment-heading {
+  flex-shrink: 0;
+  padding: 28rpx 30rpx 22rpx;
+  font-size: 34rpx;
+  font-weight: 700;
+  border-bottom: 1rpx solid #edf3f6;
+}
+.payment-body {
+  min-height: 0;
+  height: 60vh;
+}
+.payment-course-title,
+.payment-meta,
+.payment-section-title,
+.payment-policy,
+.payment-timing {
+  margin-left: 30rpx;
+  margin-right: 30rpx;
+  overflow-wrap: break-word;
+}
+.payment-course-title {
+  margin-top: 24rpx;
+  font-size: 29rpx;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.payment-meta {
+  margin-top: 8rpx;
+  font-size: 23rpx;
+  color: #70899c;
+  line-height: 1.6;
+}
+.payment-amount-box {
+  margin: 22rpx 30rpx;
+  padding: 20rpx 24rpx;
+  background: #f0f9fe;
+  border-radius: 18rpx;
+}
+.payment-amount-caption { font-size: 23rpx; color: #637f94; }
+.payment-amount { font-size: 48rpx; font-weight: 700; color: #1296db; margin-top: 6rpx; }
+.payment-amount-box .payment-meta { margin-left: 0; margin-right: 0; }
+.payment-section-title { font-size: 27rpx; font-weight: 700; margin-bottom: 14rpx; }
+.payment-policy { margin-bottom: 18rpx; font-size: 24rpx; line-height: 1.7; color: #637f94; }
+.payment-policy-title { font-weight: 600; color: #34576f; margin-bottom: 4rpx; }
+.payment-restriction { background: #fff5e8; padding: 18rpx 20rpx; border-radius: 14rpx; color: #906421; }
+.payment-restriction .payment-policy-title { color: #906421; }
+.payment-timing { margin-bottom: 24rpx; font-size: 22rpx; line-height: 1.6; color: #70899c; }
+.payment-actions {
+  flex-shrink: 0;
+  display: flex;
+  gap: 16rpx;
+  padding: 22rpx 30rpx;
+  padding-bottom: calc(22rpx + env(safe-area-inset-bottom));
+  border-top: 1rpx solid #edf3f6;
+}
+.payment-actions > button { flex: 1; font-size: 26rpx; }
+.paid-participants { display: flex; flex-wrap: wrap; margin: 0 -8rpx 16rpx; }
+.paid-participant { width: 25%; box-sizing: border-box; padding: 12rpx 8rpx; display: flex; flex-direction: column; align-items: center; }
+.participant-avatar { width: 88rpx; height: 88rpx; border-radius: 50%; background: #e8f6fd; flex-shrink: 0; }
+.participant-avatar-fallback { display: flex; align-items: center; justify-content: center; color: #1296db; font-size: 23rpx; }
+.paid-participant-name { margin-top: 12rpx; max-width: 100%; font-size: 23rpx; color: #34576f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.participant-identity { display: flex; align-items: center; gap: 16rpx; min-width: 0; }
+.participant-identity > text { overflow-wrap: anywhere; }
+.participant-identity .participant-avatar { width: 64rpx; height: 64rpx; }

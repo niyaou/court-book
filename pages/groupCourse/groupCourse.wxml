@@ -16,8 +16,8 @@
     <view class="line"><text class="label">教练</text>{{item.course.coachName}}</view>
     <view class="row small muted capacity"><text>已支付 {{item.course.paidCount}} 人 · 最低 {{item.course.minParticipants}} / 上限 {{item.course.maxParticipants}} 人</text><text>余 {{item.course.remainingSeats}} 席</text></view>
     <view class="progress-track"><view class="progress-fill" style="width:{{item.course.progress}}%"></view></view>
-    <view wx:if="{{item.myEnrollment}}" class="enrollment"><view class="row"><text class="badge {{item.myEnrollment.tone}}">{{item.myEnrollment.statusLabel}}</text><text class="small">{{item.myEnrollment.refundLabel || '本次报名实付'}} ¥{{item.myEnrollment.actualFeeYuan}}</text></view><view wx:if="{{item.myEnrollment.canCancel}}" class="notice">{{item.course.cancelDeadlineLabel}} 前可申请全额退款</view></view>
-    <view class="row"><view><text class="price">¥{{item.course.actualFeeYuan}}</text><view class="small muted">单次课程价格</view></view><text class="detail-link">查看详情 ›</text></view>
+    <view wx:if="{{item.myEnrollment}}" class="enrollment"><view class="row"><text class="badge {{item.myEnrollment.tone}}">{{item.myEnrollment.statusLabel}}</text><text class="small">{{item.myEnrollment.refundLabel || '本次报名实付'}} ¥{{item.myEnrollment.actualFeeYuan}}<text wx:if="{{item.myEnrollment.isVip}}" class="student-price">学员价</text></text></view><view wx:if="{{item.myEnrollment.canCancel}}" class="notice">{{item.course.cancelDeadlineLabel}} 前可申请全额退款</view></view>
+    <view class="row"><view><text class="price">¥{{item.course.actualFeeYuan}}</text><text wx:if="{{item.course.isVip}}" class="student-price">学员价</text><view class="small muted">单次课程价格</view></view><text class="detail-link">查看详情 ›</text></view>
   </view>
   <view wx:if="{{!loading && !items.length && !error && !(scope === 'mine' && needsAuth)}}" class="card empty">{{scope === 'mine' ? '还没有报名记录，报名成功、退款中或已取消课程都会保留在这里。' : '课程正在准备中，新团课发布后会第一时间出现在这里。'}}</view>
   <view wx:if="{{loading}}" class="empty">正在加载课程…</view>

@@ -1,5 +1,6 @@
 const api = require("../../utils/groupCourseApi");
 const view = require("../../utils/groupCourseView");
+const PAGE_SIZE = 20;
 Page({
   data: {
     scope: "public",
@@ -41,7 +42,7 @@ Page({
   async refresh() {
     const refreshId = this._refreshId = (this._refreshId || 0) + 1;
     ++this._seq;
-    this.setData({ needsAuth: !api.hasAuth(), error: "" });
+    this.setData({ needsAuth: !api.hasAuth(), error: "", loading: true, items: [], nextCursor: null });
     try {
       const context = await api.call("context");
       if (refreshId !== this._refreshId) return;
@@ -53,10 +54,14 @@ Page({
       });
       await this.loadList(false);
     } catch (e) {
-      if (refreshId === this._refreshId) this.showError(e);
+      if (refreshId === this._refreshId) {
+        this.showError(e);
+        this.setData({ loading: false });
+      }
     }
   },
   async loadList(append) {
+    if (append && (this.data.loading || !this.data.nextCursor)) return;
     const seq = ++this._seq;
     if (this.data.scope === "mine" && !api.hasAuth()) {
       this.setData({
@@ -73,7 +78,7 @@ Page({
         scope: this.data.scope,
         campus: this.data.campus || undefined,
         cursor: append ? this.data.nextCursor : undefined,
-        pageSize: 20,
+        pageSize: PAGE_SIZE,
       });
       if (seq !== this._seq) return;
       const items = data.items.map(view.item);

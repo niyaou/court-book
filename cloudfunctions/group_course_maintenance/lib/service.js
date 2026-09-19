@@ -262,31 +262,43 @@ function createService({
           (v.isAdmin || c.status !== "CANCELLED") &&
           (!e.campus || c.campus === e.campus),
       );
-    const p = page(
-      rows,
-      e.cursor,
-      e.pageSize,
-      e.scope === "mine" ? "createdAt" : "startAt",
-      e.scope === "mine",
-    );
+    const pageSize = e.pageSize === undefined ? 20 : e.pageSize;
+    if (!Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > 50)
+      fail("INVALID_ARGUMENT");
     const items = [];
-    for (const row of p.items) {
-      const c = row._course || row;
-      await settleCourse(c._id);
-      await expireCourseHolds(c._id);
-      const s = await snapshot(c._id);
-      if (e.scope === "public" && !v.isAdmin && s.c.status === "CANCELLED")
-        continue;
-      const own = v.authenticated
-        ? s.es.find((x) => x.phoneNumber === v.phoneNumber)
-        : null;
-      items.push({
-        course: courseDTO(s.c, s.es, v),
-        myEnrollment: await enrollmentDTO(own, s.c),
-      });
-    }
-    return { viewer: publicViewer(v), items, nextCursor: p.nextCursor };
+    let cursor = e.cursor;
+    let nextCursor;
+    // Settlement can hide newly cancelled courses. Keep scanning within the
+    // same filtered result until this page is full or no candidates remain.
+    do {
+      const p = page(
+        rows,
+        cursor,
+        pageSize - items.length,
+        e.scope === "mine" ? "createdAt" : "startAt",
+        e.scope === "mine",
+      );
+      for (const row of p.items) {
+        const c = row._course || row;
+        await settleCourse(c._id);
+        await expireCourseHolds(c._id);
+        const s = await snapshot(c._id);
+        if (e.scope === "public" && !v.isAdmin && s.c.status === "CANCELLED")
+          continue;
+        const own = v.authenticated
+          ? s.es.find((x) => x.phoneNumber === v.phoneNumber)
+          : null;
+        items.push({
+          course: courseDTO(s.c, s.es, v),
+          myEnrollment: await enrollmentDTO(own, s.c),
+        });
+      }
+      nextCursor = p.nextCursor;
+      cursor = nextCursor;
+    } while (items.length < pageSize && nextCursor);
+    return { viewer: publicViewer(v), items, nextCursor };
   }
+
   async function detail(e, v) {
     await settleCourse(e.courseId);
     await expireCourseHolds(e.courseId);
@@ -296,11 +308,23 @@ function createService({
       : null;
     if (c.status === "CANCELLED" && !v.isAdmin && !own)
       fail("COURSE_NOT_FOUND");
+    const paidParticipants = page(
+      es.filter((x) => x.status === "PAID"),
+      e.paidParticipantCursor,
+      20,
+      "createdAt",
+    );
     const result = {
       viewer: publicViewer(v),
       course: courseDTO(c, es, v),
       myEnrollment: await enrollmentDTO(own, c),
       payment: await paymentDTO(own),
+      paidParticipants: paidParticipants.items.map((x) => ({
+        id: x._id,
+        nickName: x.nickName || "报名学员",
+        avatarUrl: x.avatarUrl || "",
+      })),
+      paidParticipantNextCursor: paidParticipants.nextCursor,
     };
     if (v.isAdmin) {
       const p = page(
@@ -957,11 +981,12 @@ function createService({
         claimed.action === "SUBMIT" ? "submitRefund" : "queryRefund"
       ](claimed.r, p);
     } catch (err) {
-      logger.error("refund transient error", {
+      logger.error("refund transient error", JSON.stringify({
         refundId: id,
         error: err.code || err.message,
-      });
-      result = { state: "UNKNOWN", code: "TEMPORARY_ERROR" };
+        ...(err.details ? { details: err.details } : {}),
+      }));
+      result = { state: "UNKNOWN", code: err.code === "REFUND_RESPONSE_MISMATCH" ? err.code : "TEMPORARY_ERROR" };
     }
     await applyRefund(id, result, claimed.r.leaseToken);
   }
@@ -983,7 +1008,10 @@ function createService({
       await applyRefund(r._id, result);
       return { errcode: 0, errmsg: "OK" };
     } catch (err) {
-      logger.error("refund callback retry", err.code || err.message);
+      logger.error("refund callback retry", JSON.stringify({
+        error: err.code || err.message,
+        ...(err.details ? { details: err.details } : {}),
+      }));
       return { errcode: 1, errmsg: "RETRY" };
     }
   }

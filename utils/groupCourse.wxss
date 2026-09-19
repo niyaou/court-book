@@ -130,6 +130,17 @@ page {
   font-size: 22rpx;
   margin-left: 8rpx;
 }
+.student-price {
+  display: inline-block;
+  margin-left: 10rpx;
+  padding: 4rpx 10rpx;
+  border-radius: 8rpx;
+  background: #e8f6fd;
+  color: #1296db;
+  font-size: 22rpx;
+  font-weight: 600;
+  vertical-align: middle;
+}
 .original {
   font-size: 23rpx;
   color: #9caab4;
