@@ -137,7 +137,7 @@ test("callbacks query gateway, ignore spoofed success and reject amount mismatch
   );
   assert.equal(paymentResult({ errCode: 0 }, p).state, "UNKNOWN");
 });
-test("delayed formation uses fixed confirmation timestamp, cancellation wins callback race", async () => {
+test("delayed formation counts paid enrollments, cancellation wins callback race", async () => {
   const f = await published();
   const paidAt = f.now;
   const { p } = await paid(f);
@@ -435,18 +435,46 @@ test("refund worker progresses while payment queries remain pending", async () =
   resolveQuery({ state: "UNPAID" });
   await maintenance;
 });
-test("late first confirmation does not count toward fixed formation threshold", async () => {
+test("maintenance counts current paid enrollments regardless of payment timestamp", async () => {
+  for (const timestamp of ["late", "missing"]) {
+    const f = await published();
+    const c = await f.repo.get(C.course, f.id);
+    c.minParticipants = 2;
+    c.maxParticipants = 5;
+    await f.repo.set(C.course, f.id, c);
+    await paid(f, "user");
+    const second = await f.request("second", "enroll", { courseId: f.id });
+    const p = (await f.repo.scan(C.payment, { enrollmentId: second.data.enrollment.id }))[0];
+    f.now = c.startAt.getTime() - 57 * MINUTE + 1;
+    await f.service.confirmPayment(p._id, {
+      state: "PAID",
+      transactionId: "late",
+    });
+    if (timestamp === "missing") {
+      const enrollment = await f.repo.get(C.enrollment, p.enrollmentId);
+      enrollment.paidAt = null;
+      await f.repo.set(C.enrollment, enrollment._id, enrollment);
+    }
+    await f.service.maintenance({ Type: "timer" }, {});
+    assert.equal((await f.repo.get(C.course, f.id)).status, "CONFIRMED");
+    await f.service.maintenance({ Type: "timer" }, {});
+    assert.equal((await f.repo.get(C.course, f.id)).status, "CONFIRMED");
+    assert.equal((await f.repo.scan(C.refund)).length, 0);
+  }
+});
+test("maintenance cancels when current paid count is below minimum despite pending enrollment", async () => {
   const f = await published();
-  await f.request("user", "enroll", { courseId: f.id });
-  const p = (await f.repo.scan(C.payment))[0];
   const c = await f.repo.get(C.course, f.id);
+  c.minParticipants = 2;
+  c.maxParticipants = 5;
+  await f.repo.set(C.course, f.id, c);
+  await paid(f, "user");
+  await f.request("second", "enroll", { courseId: f.id });
   f.now = c.startAt.getTime() - 57 * MINUTE + 1;
-  await f.service.confirmPayment(p._id, {
-    state: "PAID",
-    transactionId: "late",
-  });
-  await f.service.settleCourse(f.id);
-  assert.equal((await f.repo.get(C.course, f.id)).status, "CANCELLED");
+  await f.service.maintenance({ Type: "timer" }, {});
+  const cancelled = await f.repo.get(C.course, f.id);
+  assert.equal(cancelled.status, "CANCELLED");
+  assert.equal(cancelled.cancelReason, "MIN_PARTICIPANTS_NOT_MET");
 });
 test("customer cancellation and detail eligibility agree across the twelve-hour boundary", async () => {
   for (const remaining of [12 * 60 * MINUTE + 1, 12 * 60 * MINUTE, 12 * 60 * MINUTE - 1, 10 * 60 * MINUTE, 6 * 60 * MINUTE]) {

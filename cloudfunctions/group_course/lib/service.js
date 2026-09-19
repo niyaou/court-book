@@ -523,12 +523,7 @@ function createService({
     return withCourse(id, async (tx, c, es) => {
       const now = clock();
       if (c.status === "PUBLISHED" && now >= deadlines(c).formationAt) {
-        const paid = es.filter(
-          (e) =>
-            e.status === "PAID" &&
-            e.paidAt &&
-            ms(e.paidAt) <= deadlines(c).formationAt,
-        ).length;
+        const paid = es.filter((e) => e.status === "PAID").length;
         if (paid >= c.minParticipants) c.status = "CONFIRMED";
         else {
           c.status = "CANCELLED";
@@ -1081,7 +1076,7 @@ function createService({
       ],
       "maintenanceAt",
     );
-    // Fixed-time formation precedes all channel queries. Read actions independently
+    // Formation counts current paid enrollments before channel queries. Read actions independently
     // settle their requested course, so delayed batches cannot reopen enrollment.
     await batch(courses, async (c) => {
       if (await reserve(C.course, c._id, "maintenanceAt"))

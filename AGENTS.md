@@ -77,3 +77,8 @@ A skill is a set of local instructions to follow that is stored in a `SKILL.md` 
 - 客户自助取消团课须距开课超过12小时；恰好12小时及以内（含开课后）不允许自行取消。
 - 前端退款说明、付款确认弹窗、服务端 cancelDeadlineAt 与 canCancel 统一遵循此规则。
 - 管理员整体取消与未成班自动全额退款沿用原有规则，不受客户自助取消截止时间限制。
+
+## 团课成班人数判定（2026-09-19）
+
+- 报名截止及成班判定触发时间保持不变；实际执行成班确认时，只统计当前 `status=PAID` 的报名人数，与 `minParticipants` 比较，不检查个人 `paidAt`。
+- 定时任务延迟期间已确认的付款计入当前人数；待付款不计入。课程已经取消后不因迟到付款恢复，继续沿用退款流程。
