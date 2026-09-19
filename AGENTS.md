@@ -61,3 +61,13 @@ A skill is a set of local instructions to follow that is stored in a `SKILL.md` 
 - VIP直接手填`vipPriceYuan`，不使用默认八折或自动折扣；原价与VIP均为至少1元的整数，VIP不高于原价。用户确认尚无已发布课程，无需旧价格兼容。
 - 仅当`bookingManaged=false`且校区没有任何CloudBase `court`记录时，由服务端提供1号场、2号场固定逻辑标识，不创建court记录；有真实场地则只使用真实列表。
 - 发布时重新校验默认标识和校区条件；同校区、同场地编号继续参与团课冲突判断，不写订场占用。
+
+## 团课退款完成判定的已确认假设（2026-09-19）
+
+用户明确要求沿用原有退款回调的处理方式，并接受以下业务假设，后续直接沿用，除非用户修改决策：
+
+- 收到可关联到现有退款记录的退款回调，就按退款完成处理，不再主动查询或要求回调提供退款成功状态。支持退款单号定位；未传退款单号时支持支付订单号定位。有支付订单号时必须与本地支付记录一致，未知记录不创建退款。
+- 补查的 returnCode、resultCode 均为 SUCCESS，outTradeNo 与本地支付订单一致，且 refundCount 为 1（含字符串 "1"），就按退款完成处理，不依赖明细数组、退款金额或明细状态。其他返回仍走原有解析或补查逻辑。
+- 这些是业务接受的推定条件，不是平台保证：收到回调或退款数量为 1 本身不证明资金到账；本规则可能将处理中或异常退款提前记为完成。
+- 推定完成使用现有事务及幂等路径：退款 SUCCESS、对应当前支付的报名 CANCELLED、更新课程人数、停止补查；支付记录保留 PAIDED。不改订场或畅打实现。
+- 退款记录 confirmationBasis 区分 CALLBACK_RECEIVED、REFUND_COUNT_ONE、QUERY_STATUS_SUCCESS；前两种 channelStatus 记 UNKNOWN，避免伪称微信返回了 SUCCESS。

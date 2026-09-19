@@ -916,6 +916,7 @@ function createService({
         r.status = "SUCCESS";
         r.nextRetryAt = null;
         r.succeededAt = date(now);
+        r.confirmationBasis = result.confirmationBasis || "QUERY_STATUS_SUCCESS";
         r.wxRefundId = result.refundId || "";
         r.failureMessage = "";
         if (en?.paymentId === r.paymentId) {
@@ -992,8 +993,12 @@ function createService({
   async function refundCallback(event) {
     try {
       const no = event.outRefundNo || event.out_refund_no;
-      if (!no) return { errcode: 0, errmsg: "OK" };
-      const r = (await repo.scan(C.refund, { outRefundNo: no }))[0];
+      const tradeNo = event.outTradeNo || event.out_trade_no;
+      if (!no && !tradeNo) return { errcode: 0, errmsg: "OK" };
+      const payment = !no && tradeNo
+        ? (await repo.scan(C.payment, { outTradeNo: tradeNo }))[0] : null;
+      const r = no ? (await repo.scan(C.refund, { outRefundNo: no }))[0]
+        : payment ? (await repo.scan(C.refund, { paymentId: payment._id }))[0] : null;
       if (!r) {
         logger.warn("unknown refund callback");
         return { errcode: 0, errmsg: "OK" };
@@ -1001,10 +1006,12 @@ function createService({
       if (r.status === "SUCCESS") return { errcode: 0, errmsg: "OK" };
       const p = await repo.get(C.payment, r.paymentId);
       if (!p) throw Error("PAYMENT_MISSING");
-      const result = await gateway.queryRefund(r, p);
-      if (result.state === "UNKNOWN" || result.state === "NOT_FOUND")
-        throw Error("REFUND_QUERY_UNRESOLVED");
-      await applyRefund(r._id, result);
+      if (tradeNo && tradeNo !== p.outTradeNo) throw Error("REFUND_RESPONSE_MISMATCH");
+      // Match existing refund first, then apply the explicitly accepted callback assumption.
+      await applyRefund(r._id, {
+        state: "SUCCESS", channelStatus: "UNKNOWN", confirmationBasis: "CALLBACK_RECEIVED",
+        refundId: event.refundId || event.refund_id || "",
+      });
       return { errcode: 0, errmsg: "OK" };
     } catch (err) {
       logger.error("refund callback retry", JSON.stringify({

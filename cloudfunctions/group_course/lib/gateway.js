@@ -39,6 +39,10 @@ function refundResult(raw, r, p) {
       state: q.errCode === "REFUNDNOTEXIST" ? "NOT_FOUND" : "UNKNOWN",
       code: q.errCode || q.returnCode,
     };
+  // Accepted project assumption (AGENTS.md, 2026-09-19), not a channel guarantee.
+  if (q.outTradeNo === p.outTradeNo && (q.refundCount === 1 || q.refundCount === "1")) {
+    return { state: "SUCCESS", channelStatus: "UNKNOWN", confirmationBasis: "REFUND_COUNT_ONE" };
+  }
   let entry;
   // CloudPay queryRefund returns parallel lists; select all fields using the
   // exact refund number's index, never the first refund or a top-level amount.
@@ -215,6 +219,8 @@ function createGateway(cloud) {
     async queryRefund(r, p) {
       const raw = await call("queryRefund", { ...options(), outRefundNo: r.outRefundNo });
       const q = normalized(raw);
+      if (success(q) && q.outTradeNo === p.outTradeNo && (q.refundCount === 1 || q.refundCount === "1"))
+        return refundResult(raw, r, p);
       // Empty detail lists are inconclusive, not proof of a missing refund.
       // Retry once by the original payment number, retaining exact refund checks.
       const empty = success(q) && q.outTradeNo === p.outTradeNo &&

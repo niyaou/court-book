@@ -876,7 +876,7 @@ test("refund callback and maintenance reconcile CloudPay list responses idempote
     const success = await f.repo.get(C.refund, r._id);
     assert.equal(success.status, 'SUCCESS');
     assert.equal(success.nextRetryAt, null);
-    assert.equal(success.wxRefundId, 'wx-refund');
+    assert.equal(success.wxRefundId, route === 'callback' ? '' : 'wx-refund');
     assert.equal((await f.repo.get(C.enrollment, en._id)).status, 'CANCELLED');
     assert.equal((await f.request('user', 'detail', { courseId: f.id })).data.course.occupiedCount, 0);
     await f.service.refundCallback({ outRefundNo: r.outRefundNo });
@@ -914,7 +914,7 @@ test("nested refund list diagnostics survive JSON logging without disclosing ide
   });
 });
 
-test("empty refund detail lists query by payment once without resubmitting or relaxing verification", async () => {
+test("empty refund detail lists query by payment once and apply the accepted count assumption", async () => {
   const { createGateway } = require('../lib/gateway');
   const p = { outTradeNo: 'payment' }, r = { outRefundNo: 'refund', amountYuan: 2 };
   const empty = { returnCode: 'SUCCESS', resultCode: 'SUCCESS', outTradeNo: p.outTradeNo,
@@ -928,7 +928,7 @@ test("empty refund detail lists query by payment once without resubmitting or re
     const gateway = createGateway({ cloudPay: { queryRefund: async args => {
       calls.push(args); return calls.length === 1 ? empty : response;
     } } });
-    if (response === valid) assert.equal((await gateway.queryRefund(r, p)).state, 'SUCCESS');
+    if (response.refundCount === 1) assert.equal((await gateway.queryRefund(r, p)).state, 'SUCCESS');
     else if (response.errCode) assert.equal((await gateway.queryRefund(r, p)).state, 'UNKNOWN');
     else await assert.rejects(gateway.queryRefund(r, p), error => {
       assert.equal(error.code, 'REFUND_RESPONSE_MISMATCH');
@@ -940,5 +940,66 @@ test("empty refund detail lists query by payment once without resubmitting or re
     assert.equal(calls[1].outRefundNo, undefined);
     assert.equal(calls[1].outTradeNo, 'payment');
     assert.equal(calls[1].offset, 0);
+  }
+});
+
+
+test("accepted refund callback completes without querying, supports trade number and is idempotent", async () => {
+  for (const key of ['outRefundNo', 'out_trade_no']) {
+    const f = await published();
+    const { p, en } = await paid(f);
+    await f.request('user', 'cancelEnrollment', { courseId: f.id });
+    const r = (await f.repo.scan(C.refund))[0];
+    f.gateway.queryRefund = async () => { throw Error('must not query'); };
+    assert.equal((await f.service.refundCallback({ outRefundNo: r.outRefundNo, outTradeNo: 'wrong' })).errcode, 1);
+    assert.equal((await f.repo.get(C.enrollment, en._id)).status, 'REFUNDING');
+    await f.service.refundCallback({ outRefundNo: 'unknown' });
+    assert.equal((await f.repo.get(C.enrollment, en._id)).status, 'REFUNDING');
+    const event = { [key]: key === 'outRefundNo' ? r.outRefundNo : p.outTradeNo };
+    assert.equal((await f.service.refundCallback(event)).errcode, 0);
+    const completed = await f.repo.get(C.refund, r._id);
+    assert.equal(completed.status, 'SUCCESS');
+    assert.equal(completed.confirmationBasis, 'CALLBACK_RECEIVED');
+    assert.equal(completed.channelStatus, 'UNKNOWN');
+    assert.equal(completed.nextRetryAt, null);
+    assert.equal((await f.repo.get(C.enrollment, en._id)).status, 'CANCELLED');
+    assert.equal((await f.repo.get(C.payment, p._id)).status, 'PAIDED');
+    await f.service.refundCallback(event);
+    assert.deepEqual(await f.repo.get(C.refund, r._id), completed);
+    assert.equal((await f.request('user', 'detail', { courseId: f.id })).data.course.occupiedCount, 0);
+  }
+});
+
+test("accepted refund count completes empty-list maintenance without another query or submission", async () => {
+  const { createGateway } = require('../lib/gateway');
+  for (const count of [1, '1']) {
+    const f = await published();
+    const { p, en } = await paid(f);
+    await f.request('user', 'cancelEnrollment', { courseId: f.id });
+    const r = (await f.repo.scan(C.refund))[0];
+    await f.repo.set(C.refund, r._id, { ...r, status: 'PROCESSING', nextAction: 'QUERY' });
+    let queries = 0;
+    f.gateway.queryRefund = createGateway({ cloudPay: { queryRefund: async () => {
+      queries++;
+      return { returnCode: 'SUCCESS', resultCode: 'SUCCESS', outTradeNo: p.outTradeNo,
+        refundCount: count, outRefundNoList: [], refundFeeList: [], refundStatusList: [], refundIdList: [] };
+    } } }).queryRefund;
+    await f.service.maintenance({ Type: 'timer' }, {});
+    const completed = await f.repo.get(C.refund, r._id);
+    assert.equal(queries, 1);
+    assert.equal(completed.status, 'SUCCESS');
+    assert.equal(completed.confirmationBasis, 'REFUND_COUNT_ONE');
+    assert.equal(completed.nextRetryAt, null);
+    assert.equal((await f.repo.get(C.enrollment, en._id)).status, 'CANCELLED');
+    await f.service.maintenance({ Type: 'timer' }, {});
+    assert.equal(queries, 1);
+  }
+  const p = { outTradeNo: 'payment' }, r = { outRefundNo: 'refund', amountYuan: 2 };
+  const base = { returnCode: 'SUCCESS', resultCode: 'SUCCESS', outTradeNo: p.outTradeNo, refundCount: 1 };
+  for (const patch of [{ refundCount: 0 }, { refundCount: 2 }, { refundCount: true }, { outTradeNo: 'other' }]) {
+    assert.throws(() => refundResult({ ...base, ...patch }, r, p), /REFUND_RESPONSE_MISMATCH/);
+  }
+  for (const patch of [{ returnCode: 'FAIL' }, { resultCode: 'FAIL' }]) {
+    assert.equal(refundResult({ ...base, ...patch }, r, p).state, 'UNKNOWN');
   }
 });
