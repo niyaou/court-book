@@ -71,3 +71,9 @@ A skill is a set of local instructions to follow that is stored in a `SKILL.md` 
 - 这些是业务接受的推定条件，不是平台保证：收到回调或退款数量为 1 本身不证明资金到账；本规则可能将处理中或异常退款提前记为完成。
 - 推定完成使用现有事务及幂等路径：退款 SUCCESS、对应当前支付的报名 CANCELLED、更新课程人数、停止补查；支付记录保留 PAIDED。不改订场或畅打实现。
 - 退款记录 confirmationBasis 区分 CALLBACK_RECEIVED、REFUND_COUNT_ONE、QUERY_STATUS_SUCCESS；前两种 channelStatus 记 UNKNOWN，避免伪称微信返回了 SUCCESS。
+
+## 团课客户取消截止时间（2026-09-19）
+
+- 客户自助取消团课须距开课超过12小时；恰好12小时及以内（含开课后）不允许自行取消。
+- 前端退款说明、付款确认弹窗、服务端 cancelDeadlineAt 与 canCancel 统一遵循此规则。
+- 管理员整体取消与未成班自动全额退款沿用原有规则，不受客户自助取消截止时间限制。

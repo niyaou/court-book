@@ -1,5 +1,6 @@
 const api = require("../../utils/groupCourseApi");
 const view = require("../../utils/groupCourseView");
+const { campusLocation } = require("../../utils/groupCourseLocations");
 const confirm = (options) =>
   new Promise((resolve) =>
     wx.showModal(
@@ -15,6 +16,7 @@ Page({
   data: {
     courseId: "",
     course: null,
+    location: null,
     enrollment: null,
     payment: null,
     viewer: {},
@@ -109,6 +111,7 @@ Page({
       );
       this.setData({
         course: view.course(data.course),
+        location: campusLocation(data.course.campus),
         notice: !acceptsPayment(data.course)
           ? data.course.status === "CANCELLED"
             ? "课程已取消，不能继续付款；如已付款，请查看本页退款进度。"
@@ -136,6 +139,32 @@ Page({
     } finally {
       this.setData({ loading: false });
     }
+  },
+  openCampusLocation() {
+    const location = campusLocation(this.data.course && this.data.course.campus);
+    if (!location) {
+      wx.showToast({ title: "请联系教练确认上课地点", icon: "none" });
+      return;
+    }
+    wx.openLocation({
+      latitude: location.latitude,
+      longitude: location.longitude,
+      name: location.name,
+      address: location.address,
+      scale: 18,
+      fail: (error) => {
+        if (error && /cancel/i.test(error.errMsg || "")) return;
+        wx.showModal({
+          title: "地图暂时无法打开",
+          content: `${location.name}\n${location.address}`,
+          confirmText: "复制地址",
+          cancelText: "关闭",
+          success: (result) => {
+            if (result.confirm) wx.setClipboardData({ data: `${location.name} ${location.address}` });
+          },
+        });
+      },
+    });
   },
   showError(e) {
     const patch = { error: e.message, needsAuth: !api.hasAuth() };

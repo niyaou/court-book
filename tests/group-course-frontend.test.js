@@ -23,7 +23,11 @@ function loadPage(name, api, wxOverrides = {}) {
     Page: (page) => {
       definition = page;
     },
-    require: (spec) => (spec.includes("groupCourseApi") ? api : view),
+    require: (spec) => {
+      if (spec.includes("groupCourseApi")) return api;
+      if (spec.includes("groupCourseLocations")) return require("../utils/groupCourseLocations");
+      return view;
+    },
     module: { exports: {} },
     wx,
     setInterval: () => 1,
@@ -65,6 +69,75 @@ const fakeApi = (overrides) => ({
   hasAuth: () => true,
   call: async () => ({}),
   ...overrides,
+});
+test("detail refresh and map action follow the current campus without requesting user location", async () => {
+  let campus = "麓坊校区";
+  const opened = [];
+  const { page } = loadPage("groupCourseDetail", fakeApi({
+    call: async () => ({
+      course: { campus, status: "PUBLISHED", startAt: now, endAt: now + 3600000 },
+      viewer: {},
+    }),
+  }), {
+    openLocation: (options) => opened.push(options),
+    getLocation: () => assert.fail("destination display must not request user location"),
+  });
+  page.setData({ courseId: "course" });
+  const destinations = [
+    ["麓坊校区", 30.461094427278926, 104.05406090412829, "麓坊街93号"],
+    ["雅居乐校区", 30.480215, 104.137134, "正熙雅居酒店内"],
+    ["华府校区", 30.526317, 104.056563, "成都市双流区"],
+    ["英郡校区", 30.543125, 104.073025, "英郡一期南门"],
+  ];
+  for (const [name, latitude, longitude, address] of destinations) {
+    campus = name;
+    await page.loadDetail();
+    assert.equal(page.data.error, "");
+    assert.ok(page.data.location.address.includes(address));
+    page.openCampusLocation();
+    const actual = opened.at(-1);
+    assert.equal(actual.latitude, latitude);
+    assert.equal(actual.longitude, longitude);
+    assert.equal(actual.address, page.data.location.address);
+    assert.equal(actual.scale, 18);
+  }
+  campus = "新校区";
+  await page.loadDetail();
+  assert.equal(page.data.location, null);
+});
+
+test("unknown campus never navigates to another campus even with stale location data", () => {
+  let toast;
+  const { page } = loadPage("groupCourseDetail", fakeApi(), {
+    openLocation: () => assert.fail("unknown campus must not open a map"),
+    showToast: (options) => { toast = options; },
+  });
+  for (const campus of ["未知校区", "constructor", "__proto__", null]) {
+    page.setData({ course: { campus }, location: { latitude: 30, longitude: 104 } });
+    page.openCampusLocation();
+    assert.equal(toast.title, "请联系教练确认上课地点");
+  }
+});
+
+test("map failure offers the actual destination for copying and ignores cancellation", () => {
+  let options;
+  let dialog;
+  let copied;
+  const { page } = loadPage("groupCourseDetail", fakeApi(), {
+    openLocation: (value) => { options = value; },
+    showModal: (value) => { dialog = value; },
+    setClipboardData: ({ data }) => { copied = data; },
+  });
+  page.setData({ course: { campus: "英郡校区" } });
+  page.openCampusLocation();
+  options.fail({ errMsg: "openLocation:fail cancel" });
+  assert.equal(dialog, undefined);
+  options.fail({ errMsg: "openLocation:fail" });
+  assert.equal(dialog.confirmText, "复制地址");
+  dialog.success({ confirm: false });
+  assert.equal(copied, undefined);
+  dialog.success({ confirm: true });
+  assert.ok(copied.includes("英郡一期南门"));
 });
 function readyForm(api) {
   const context = loadPage("groupCourseForm", api);

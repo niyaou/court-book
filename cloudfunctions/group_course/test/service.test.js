@@ -139,6 +139,7 @@ test("callbacks query gateway, ignore spoofed success and reject amount mismatch
 });
 test("delayed formation uses fixed confirmation timestamp, cancellation wins callback race", async () => {
   const f = await published();
+  const paidAt = f.now;
   const { p } = await paid(f);
   const c = await f.repo.get(C.course, f.id);
   f.now = c.startAt.getTime() - 57 * MINUTE + 10 * MINUTE;
@@ -161,7 +162,7 @@ test("delayed formation uses fixed confirmation timestamp, cancellation wins cal
   await f.service.confirmPayment(p._id, { state: "PAID", transactionId: "tx" });
   assert.equal(
     (await f.repo.get(C.payment, p._id)).paidAt.getTime(),
-    Date.parse("2026-09-06T08:00:00+08:00"),
+    paidAt,
   );
 });
 test("cancellation interruption repair, idempotent refund lease, success frees seat only once", async () => {
@@ -447,11 +448,29 @@ test("late first confirmation does not count toward fixed formation threshold", 
   await f.service.settleCourse(f.id);
   assert.equal((await f.repo.get(C.course, f.id)).status, "CANCELLED");
 });
-test("six-hour cancellation cutoff is strict and VIP failure never charges original price", async () => {
+test("customer cancellation and detail eligibility agree across the twelve-hour boundary", async () => {
+  for (const remaining of [12 * 60 * MINUTE + 1, 12 * 60 * MINUTE, 12 * 60 * MINUTE - 1, 10 * 60 * MINUTE, 6 * 60 * MINUTE]) {
+    const f = await published();
+    const { en } = await paid(f);
+    const c = await f.repo.get(C.course, f.id);
+    f.now = c.startAt.getTime() - remaining;
+    const allowed = remaining > 12 * 60 * MINUTE;
+    const detail = await f.request("user", "detail", { courseId: f.id });
+    assert.equal(detail.success, true);
+    assert.equal(detail.data.course.cancelDeadlineAt, c.startAt.getTime() - 12 * 60 * MINUTE);
+    assert.equal(detail.data.myEnrollment.canCancel, allowed);
+    const result = await f.request("user", "cancelEnrollment", { courseId: f.id });
+    assert.equal(result.success, allowed);
+    if (!allowed) assert.equal(result.error, "CANCEL_WINDOW_CLOSED");
+    assert.equal((await f.repo.get(C.enrollment, en._id)).status, allowed ? "REFUNDING" : "PAID");
+    assert.equal((await f.repo.scan(C.refund)).length, allowed ? 1 : 0);
+  }
+});
+test("twelve-hour cancellation cutoff is strict and VIP failure never charges original price", async () => {
   const f = await published();
   await paid(f);
   const c = await f.repo.get(C.course, f.id);
-  f.now = c.startAt.getTime() - 360 * MINUTE;
+  f.now = c.startAt.getTime() - 12 * 60 * MINUTE;
   assert.equal(
     (await f.request("user", "cancelEnrollment", { courseId: f.id })).error,
     "CANCEL_WINDOW_CLOSED",

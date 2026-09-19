@@ -12,9 +12,7 @@
   margin-bottom: 12rpx;
 }
 .control {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: block;
   box-sizing: border-box;
   width: 100%;
   min-height: 76rpx;
@@ -27,9 +25,20 @@
   color: #34576f;
   line-height: 1.6;
 }
-.control > text {
+.picker-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.picker-control > text {
   color: #91a8b9;
   margin-left: 10rpx;
+  flex-shrink: 0;
+}
+.input-control {
+  height: 76rpx;
+  padding: 0 18rpx;
+  line-height: normal;
 }
 .textarea {
   height: 210rpx;

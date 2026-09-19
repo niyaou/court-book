@@ -3,12 +3,24 @@
   <view wx:if="{{notice}}" class="notice">{{notice}}</view>
   <view wx:if="{{needsAuth}}" class="card auth-card"><text class="small">请在个人中心完成登录后继续。</text><button class="primary" bindtap="goToLogin" loading="{{busy}}" disabled="{{busy}}">前往个人中心</button></view>
   <block wx:if="{{course}}">
-    <view wx:if="{{enrollment}}" class="card personal"><view class="row"><text class="section-title">我的报名</text><text class="badge {{enrollment.tone}}">{{enrollment.statusLabel}}</text></view><view class="row"><text class="small">本次实付 ¥{{enrollment.actualFeeYuan}}<text wx:if="{{enrollment.isVip}}" class="student-price">学员价</text></text><text class="small">{{enrollment.refundLabel}}</text></view><view wx:if="{{enrollment.status === 'PENDING_PAYMENT' && course.status !== 'CANCELLED' && course.status !== 'COMPLETED'}}" class="notice">名额占位剩余 {{holdLabel}}。付款单有效2分钟；随后等待系统确认，满3分钟未确认则占位失效。</view><view wx:if="{{enrollment.canCancel}}" class="notice">{{course.cancelDeadlineLabel}} 前可申请全额退款</view><button wx:if="{{enrollment.canCancel}}" class="secondary" bindtap="cancelEnrollment" disabled="{{busy}}">取消报名</button></view>
-    <view class="hero"><view class="row"><text class="eyebrow">LD TENNIS · GROUP CLASS</text><text class="badge {{course.tone}}">{{course.statusLabel}}</text></view><view class="hero-title">{{course.title}}</view><view class="hero-sub">{{course.timeLabel}}</view><view class="hero-sub">{{course.campus}} · {{course.courtLabel}}</view></view>
-    <view class="card"><view class="section-title">授课教练</view><view class="coach"><view class="coach-initial">教</view><view><view class="title">{{course.coachName}}</view><view class="small muted">{{course.coachIntroduction || '课程教学由本节授课教练负责'}}</view></view></view></view>
+    <view class="hero course-banner">
+      <view class="banner-heading">
+        <view class="hero-title">{{course.title}}</view>
+        <text class="badge {{course.tone}}">{{course.statusLabel}}</text>
+      </view>
+      <view class="banner-time"><text class="banner-label">时间</text><text class="banner-time-value">{{course.timeLabel}}</text></view>
+      <view class="banner-venue">
+        <text class="banner-campus">{{course.campus}}</text>
+        <text class="banner-court">{{course.courtLabel}}</text>
+      </view>
+      <view wx:if="{{location}}" class="banner-address" bindtap="openCampusLocation" role="button" aria-label="查看{{course.campus}}地图，{{location.address}}" hover-class="banner-address-pressed"><text>{{location.address}}</text><image class="banner-map-icon" src="/images/campus-navigation.svg" mode="aspectFit" /></view>
+      <view wx:else class="banner-address">请联系教练确认详细地址</view>
+      <view wx:if="{{location.hint}}" class="banner-location-hint">{{location.hint}}</view>
+    </view>
     <view class="card"><view class="section-title">课程说明</view><view class="text-body">{{course.description}}</view></view>
+    <view class="card"><view class="section-title">授课教练</view><view class="coach"><view class="coach-initial">教</view><view><view class="title">{{course.coachName}}</view><view class="small muted">{{course.coachIntroduction || '课程教学由本节授课教练负责'}}</view></view></view></view>
     <view class="card"><view class="section-title">开课进度</view><view class="row small muted"><text>已支付 {{course.paidCount}} 人</text><text>最低 {{course.minParticipants}} 人 / 上限 {{course.maxParticipants}} 人</text></view><view class="progress-track"><view class="progress-fill" style="width:{{course.progress}}%"></view></view><view class="small muted">剩余 {{course.remainingSeats}} 席，待付款与退款中报名也会占用名额。</view></view>
-    <view class="card"><view class="section-title">报名与退款</view><view class="rule"><text class="rule-number">1</text><text>请在创建付款单后2分钟内完成付款。</text></view><view class="rule"><text class="rule-number">2</text><text>报名截止：{{course.deadlineLabel}}。截止后3分钟确定是否成班，未成班自动全额退款。</text></view><view class="rule"><text class="rule-number">3</text><text>开课6小时前可申请全额退款。退款到账后释放名额；到账状态以系统确认为准。</text></view></view>
+    <view class="card"><view class="section-title">报名与退款</view><view class="rule"><text class="rule-number">1</text><text>请在创建付款单后2分钟内完成付款。</text></view><view class="rule"><text class="rule-number">2</text><text>报名截止：{{course.deadlineLabel}}。截止后3分钟确定是否成班，未成班自动全额退款。</text></view><view class="rule"><text class="rule-number">3</text><text>距开课超过12小时可申请全额退款，12小时内（含）不可自行取消。退款到账后释放名额；到账状态以系统确认为准。</text></view></view>
     <view class="card" wx:if="{{paidParticipants.length}}">
       <view class="section-title">已报名学员</view>
       <view class="paid-participants">
@@ -21,6 +33,7 @@
       <button wx:if="{{paidParticipantNextCursor}}" class="secondary" bindtap="loadPaidParticipants" disabled="{{loading}}">查看更多学员</button>
     </view>
     <view wx:if="{{canManage}}" class="card"><view class="section-title">报名名单</view><view class="small muted" wx:if="{{!participants.length}}">暂无报名记录</view><view wx:for="{{participants}}" wx:key="id" class="participant"><view class="row"><view class="participant-identity"><image wx:if="{{item.avatarUrl}}" class="participant-avatar" src="{{item.avatarUrl}}" mode="aspectFill" data-group="admin" data-id="{{item.id}}" binderror="participantAvatarError" /><view wx:else class="participant-avatar participant-avatar-fallback">学员</view><text>{{item.nickName || '报名学员'}}</text></view><text class="small">{{item.statusLabel}}</text></view><view class="row small muted"><text selectable>{{item.phoneNumber}}</text><text>¥{{item.actualFeeYuan}} {{item.refundLabel}}</text></view></view><button wx:if="{{participantNextCursor}}" class="secondary" bindtap="loadParticipants" disabled="{{loading}}">加载更多报名记录</button><view wx:if="{{refundSummary}}" class="notice">退款进度：待处理 {{refundSummary.pending}} · 处理中 {{refundSummary.processing}} · 成功 {{refundSummary.success}} · 异常 {{refundSummary.failed}}</view><button wx:if="{{course.status !== 'CANCELLED'}}" class="danger-button" bindtap="cancelCourse" disabled="{{busy}}">整体取消课程</button><view class="small muted admin-note">发布后不可修改；需要变更请整体取消后重新发布。</view></view>
+    <view wx:if="{{enrollment}}" class="card personal"><view class="row"><text class="section-title">我的报名</text><text class="badge {{enrollment.tone}}">{{enrollment.statusLabel}}</text></view><view class="row"><text class="small">本次实付 ¥{{enrollment.actualFeeYuan}}<text wx:if="{{enrollment.isVip}}" class="student-price">学员价</text></text><text class="small">{{enrollment.refundLabel}}</text></view><view wx:if="{{enrollment.status === 'PENDING_PAYMENT' && course.status !== 'CANCELLED' && course.status !== 'COMPLETED'}}" class="notice">名额占位剩余 {{holdLabel}}。付款单有效2分钟；随后等待系统确认，满3分钟未确认则占位失效。</view><view wx:if="{{enrollment.canCancel}}" class="notice">{{course.cancelDeadlineLabel}} 前可申请全额退款</view><button wx:if="{{enrollment.canCancel}}" class="secondary" bindtap="cancelEnrollment" disabled="{{busy}}">取消报名</button></view>
     <view class="footer-space"></view>
     <view class="sticky"><button wx:if="{{course.status === 'CANCELLED' || course.status === 'COMPLETED'}}" class="secondary" disabled>{{course.status === 'CANCELLED' ? '课程已取消' : '课程已结束'}}</button><button wx:elif="{{canPay}}" class="primary" bindtap="continuePayment" loading="{{busy}}" disabled="{{busy}}">{{enrollment.isVip ? '学员价 ' : ''}}¥{{enrollment.actualFeeYuan}} · 继续付款</button><button wx:elif="{{enrollment.status === 'PENDING_PAYMENT'}}" class="secondary" bindtap="refresh" disabled="{{loading || busy}}">等待报名确认 · 刷新状态</button><button wx:elif="{{course.canEnroll && viewer.authenticated}}" class="primary" bindtap="enroll" loading="{{busy}}" disabled="{{busy}}">{{course.isVip ? '学员价 ' : ''}}¥{{course.actualFeeYuan}} · 立即报名</button><button wx:elif="{{needsAuth}}" class="primary" bindtap="goToLogin" disabled="{{busy}}">前往个人中心登录</button><button wx:else class="secondary" disabled>{{course.status === 'CANCELLED' ? '课程已取消' : course.status === 'COMPLETED' ? '课程已结束' : enrollment.status === 'PAID' ? '已报名 · 请按时上课' : enrollment.statusLabel || course.disabledLabel}}</button></view>
   </block>
@@ -39,11 +52,11 @@
         </view>
         <view class="payment-section-title">退款规则</view>
         <view class="payment-policy">
-          <view class="payment-policy-title">距开课超过 6 小时</view>
+          <view class="payment-policy-title">距开课超过 12 小时</view>
           <view>自行取消报名，全额原路退款。</view>
         </view>
         <view class="payment-policy payment-restriction">
-          <view class="payment-policy-title">距开课不足或等于 6 小时</view>
+          <view class="payment-policy-title">距开课不足或等于 12 小时</view>
           <view>包括开课后，不支持自行取消退款。</view>
         </view>
         <view class="payment-policy">

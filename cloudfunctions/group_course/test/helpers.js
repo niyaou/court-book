@@ -62,7 +62,8 @@ class MemoryRepository {
 }
 async function fixture() {
   const repo = new MemoryRepository();
-  let now = Date.parse("2026-09-06T08:00:00+08:00");
+  // Default course starts at 18:00; keep the fixture outside the 12-hour cutoff.
+  let now = Date.parse("2026-09-06T04:00:00+08:00");
   const calls = { create: 0, submit: 0, query: 0 };
   const gateway = {
     createPayment: async () => {

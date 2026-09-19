@@ -80,7 +80,7 @@ const occupied = (e, now) =>
 const deadlines = (c) => ({
   enrollmentDeadlineAt: ms(c.startAt) - 60 * MINUTE,
   formationAt: ms(c.startAt) - 57 * MINUTE,
-  cancelDeadlineAt: ms(c.startAt) - 360 * MINUTE,
+  cancelDeadlineAt: ms(c.startAt) - 12 * 60 * MINUTE,
 });
 function beijing(n) {
   const d = new Date(n + 8 * 60 * MINUTE);

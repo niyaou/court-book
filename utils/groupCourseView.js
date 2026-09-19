@@ -79,8 +79,17 @@ function course(value) {
   });
 }
 function item(value) {
+  const campusTones = {
+    "麓坊校区": "blue",
+    "雅居乐校区": "green",
+    "华府校区": "orange",
+    "英郡校区": "purple",
+    "桐梓林校区": "rose",
+  };
   return {
     id: value.course.id,
+    campusTone: Object.prototype.hasOwnProperty.call(campusTones, value.course.campus)
+      ? campusTones[value.course.campus] : "neutral",
     course: course(value.course),
     myEnrollment: enrollment(value.myEnrollment),
   };
