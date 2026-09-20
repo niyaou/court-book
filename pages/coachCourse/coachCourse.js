@@ -1,10 +1,11 @@
 const app = getApp()
 const { COURSE, RECHARGE_NOTICE, mergeSubmissions, rechargeSubmission } = require('./submissions')
 
-const typeLabel = { '-2': '体验课未成单', '-1': '体验课成单', 0: '订场', 1: '班课', 2: '私教' }
+const typeLabel = { '-2': '体验课未成单', '-1': '体验课成单', 0: '订场', 1: '班课', 2: '私教', 3: '单次班课' }
 function decorateCourse(course) {
   return {
     ...course,
+    participantCount: Number(course.courseType) === 3 ? Number(course.participantCount) || 0 : 0,
     coachName: course.coachName || ((app.globalData.coachContext.coach || {}).name || ''),
     typeLabel: typeLabel[course.courseType] || '未知课程',
     adultLabel: Number(course.courseType) === 0 ? '' : (Number(course.isAdult) === 1 ? '成人' : '儿童')

@@ -8,9 +8,10 @@
     <view class="field"><text class="label">课程类型</text><picker range="{{courseTypes}}" range-key="label" value="{{courseTypeIndex}}" disabled="{{!duration}}" bindchange="onCourseTypeChange"><view class="picker-value">{{courseTypeIndex < 0 ? '请选择' : courseTypes[courseTypeIndex].label}} ›</view></picker></view>
     <view class="field adult-field" wx:if="{{courseType !== null && courseType !== 0}}"><text class="label">成人/儿童</text><radio-group bindchange="onAdultChange"><label><radio value="1" checked="{{isAdult === 1}}"/>成人</label><label><radio value="0" checked="{{isAdult === 0}}"/>儿童</label></radio-group></view>
     <view class="field"><text class="label">校区</text><picker range="{{courts}}" range-key="name" value="{{courtIndex}}" disabled="{{courseType === null || (courseType !== 0 && isAdult === null)}}" bindchange="onCourtChange"><view class="picker-value">{{courtIndex < 0 ? '请选择' : courts[courtIndex].name}} ›</view></picker></view>
+    <view class="field" wx:if="{{courseType === 3}}"><text class="label">上报人数</text><input class="count-input" type="number" placeholder="请输入正整数" value="{{participantCount}}" disabled="{{!courtId}}" bindinput="onParticipantCountInput"/><text>人</text></view>
   </view>
 
-  <view class="form-card" wx:if="{{courseType !== null && courseType >= 0}}">
+  <view class="form-card" wx:if="{{courseType !== null && courseType >= 0 && courseType !== 3}}">
     <view class="section-title">会员与消费信息</view>
     <view wx:if="{{courtId}}">
     <view class="member-editor" wx:for="{{members}}" wx:key="memberId" wx:for-index="index">

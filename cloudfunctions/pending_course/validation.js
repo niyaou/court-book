@@ -1,4 +1,5 @@
-const COURSE_TYPES = new Set([-2, -1, 0, 1, 2])
+const SINGLE_CLASS_COURSE_TYPE = 3
+const COURSE_TYPES = new Set([-2, -1, 0, 1, 2, SINGLE_CLASS_COURSE_TYPE])
 const timePattern = /^\d{4}-\d{2}-\d{2} (\d{2}):(\d{2}):00$/
 
 function number(value) { return typeof value === 'number' ? value : Number(value) }
@@ -40,14 +41,19 @@ function normalizeAndValidateCourse(input) {
   const courtId = number(course.courtId !== undefined ? course.courtId : course.court_id)
   const duration = number(course.duration)
   const isAdult = course.isAdult === undefined || course.isAdult === null ? 1 : number(course.isAdult)
+  const participantCount = courseType === SINGLE_CLASS_COURSE_TYPE ? number(course.participantCount !== undefined ? course.participantCount : course.participant_count) : 0
   const description = String(course.description || '')
   const startMinutes = minutes(startTime); const endMinutes = minutes(endTime)
   if (!Number.isInteger(courtId) || courtId <= 0 || !COURSE_TYPES.has(courseType)) return { error: '课程类型或校区无效' }
   if (startMinutes === null || endMinutes === null || startTime.slice(0, 10) !== endTime.slice(0, 10) || endMinutes <= startMinutes || startMinutes % 30 || endMinutes % 30) return { error: '课程时间无效' }
   if (!Number.isFinite(duration) || !isHalfStep(duration) || duration !== (endMinutes - startMinutes) / 60) return { error: '课程时长无效' }
   if ((courseType !== 0 && ![0, 1].includes(isAdult)) || (courseType === 0 && isAdult !== 1)) return { error: '成人儿童字段无效' }
+  const memberInputs = [course.membersData, course.members_data, course.members].filter(value => value !== undefined)
   const rawMembers = Array.isArray(course.membersData) ? course.membersData : (Array.isArray(course.members_data) ? course.members_data : [])
-  if ((courseType < 0 && rawMembers.length) || (courseType >= 0 && !rawMembers.length)) return { error: courseType < 0 ? '体验课不能填写会员' : '该课程至少需要一位会员' }
+  if (courseType === SINGLE_CLASS_COURSE_TYPE && (!Number.isInteger(participantCount) || participantCount <= 0)) return { error: '单次班课人数必须为正整数' }
+  if (courseType === SINGLE_CLASS_COURSE_TYPE && memberInputs.some(value => !Array.isArray(value) || value.length)) return { error: '单次班课不能填写会员' }
+  if (courseType < 0 && rawMembers.length) return { error: '体验课不能填写会员' }
+  if ([0, 1, 2].includes(courseType) && !rawMembers.length) return { error: '该课程至少需要一位会员' }
   const members = rawMembers.map(normalizeMember)
   const ids = new Set()
   for (const member of members) {
@@ -56,7 +62,7 @@ function normalizeAndValidateCourse(input) {
     const error = validateMember(member)
     if (error) return { error }
   }
-  return { course: { courtId, startTime, endTime, duration, courseType, isAdult: courseType === 0 ? 1 : isAdult, description, members } }
+  return { course: { courtId, startTime, endTime, duration, courseType, isAdult: courseType === 0 ? 1 : isAdult, participantCount, description, members } }
 }
 
 module.exports = { normalizeAndValidateCourse, normalizeMember, validateMember }

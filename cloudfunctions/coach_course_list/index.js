@@ -15,11 +15,11 @@ exports.main = async (event) => {
     connection = await createConnection()
     const currentMonthRange = rangeForCurrentMonth()
     const [summaryRows] = await connection.execute(
-      `SELECT c.course_type AS courseType, c.duration, COALESCE(SUM(s.quantities), 0) AS quantities
+      `SELECT c.course_type AS courseType, c.duration, COALESCE(c.participant_count, 0) AS participantCount, COALESCE(SUM(s.quantities), 0) AS quantities
        FROM course c
        LEFT JOIN spend s ON s.course_id = c.id AND s.deleted_at IS NULL
        WHERE c.coach_id = ? AND c.start_time >= ? AND c.start_time < ? AND c.deleted_at IS NULL
-       GROUP BY c.id, c.course_type, c.duration`,
+       GROUP BY c.id, c.course_type, c.duration, c.participant_count`,
       [coachId, currentMonthRange.start, currentMonthRange.end]
     )
     const currentMonthSummary = summarizeCourses(summaryRows, currentMonthRange.month)
@@ -28,7 +28,7 @@ exports.main = async (event) => {
     const effectivePage = totalPages ? Math.min(page, totalPages) : 1
     const offset = (effectivePage - 1) * PAGE_SIZE
     const [courses] = await connection.execute(
-      `SELECT c.id, c.court_id AS courtId, COALESCE(ct.name, '') AS courtName, DATE_FORMAT(c.start_time, '%Y-%m-%d %H:%i:%s') AS startTime, DATE_FORMAT(c.end_time, '%Y-%m-%d %H:%i:%s') AS endTime, c.duration, c.course_type AS courseType, c.is_adult AS isAdult, c.description FROM course c LEFT JOIN court ct ON ct.id = c.court_id AND ct.deleted_at IS NULL WHERE c.coach_id = ? AND c.start_time >= ? AND c.start_time < ? AND c.deleted_at IS NULL ORDER BY c.start_time DESC, c.id DESC LIMIT ${PAGE_SIZE} OFFSET ${offset}`,
+      `SELECT c.id, c.court_id AS courtId, COALESCE(ct.name, '') AS courtName, DATE_FORMAT(c.start_time, '%Y-%m-%d %H:%i:%s') AS startTime, DATE_FORMAT(c.end_time, '%Y-%m-%d %H:%i:%s') AS endTime, c.duration, c.course_type AS courseType, c.is_adult AS isAdult, COALESCE(c.participant_count, 0) AS participantCount, c.description FROM course c LEFT JOIN court ct ON ct.id = c.court_id AND ct.deleted_at IS NULL WHERE c.coach_id = ? AND c.start_time >= ? AND c.start_time < ? AND c.deleted_at IS NULL ORDER BY c.start_time DESC, c.id DESC LIMIT ${PAGE_SIZE} OFFSET ${offset}`,
       [coachId, start, end]
     )
     const ids = courses.map(item => item.id)
@@ -39,7 +39,7 @@ exports.main = async (event) => {
       )
       members.forEach(member => byCourse.get(Number(member.courseId)).push(member))
     }
-    return { success: true, code: 'SUCCESS', data: courses.map(course => ({ ...course, id: Number(course.id), duration: Number(course.duration), courseType: Number(course.courseType), isAdult: Number(course.isAdult), membersData: byCourse.get(Number(course.id)) || [] })), currentMonthSummary, page: effectivePage, pageSize: PAGE_SIZE, total, totalPages }
+    return { success: true, code: 'SUCCESS', data: courses.map(course => ({ ...course, id: Number(course.id), duration: Number(course.duration), courseType: Number(course.courseType), isAdult: Number(course.isAdult), participantCount: Number(course.courseType) === 3 ? Number(course.participantCount || 0) : 0, membersData: Number(course.courseType) === 3 ? [] : (byCourse.get(Number(course.id)) || []) })), currentMonthSummary, page: effectivePage, pageSize: PAGE_SIZE, total, totalPages }
   } catch (error) {
     console.error('coach_course_list failed:', error)
     return { success: false, code: 'DB_ERROR', message: '正式课查询失败' }

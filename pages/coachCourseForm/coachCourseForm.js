@@ -1,5 +1,5 @@
 const app = getApp()
-const courseTypes = [{ value: -2, label: '体验课未成单' }, { value: -1, label: '体验课成单' }, { value: 0, label: '订场' }, { value: 1, label: '班课' }, { value: 2, label: '私教' }]
+const courseTypes = [{ value: -2, label: '体验课未成单' }, { value: -1, label: '体验课成单' }, { value: 0, label: '订场' }, { value: 1, label: '班课' }, { value: 2, label: '私教' }, { value: 3, label: '单次班课' }]
 const deductionTypes = [{ value: 'charge', label: '课时费' }, { value: 'times', label: '次卡' }, { value: 'annual_times', label: '年卡' }]
 const timeOptions = Array.from({ length: 48 }, (_, index) => `${String(Math.floor(index / 2)).padStart(2, '0')}:${index % 2 ? '30' : '00'}`)
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
@@ -34,7 +34,7 @@ function resetMemberSpend(member, type) {
 Page({
   data: {
     mode: 'create', pendingId: null, coach: null, courts: [], date: today(), startTime: '', endTime: '', duration: null,
-    courseType: null, courseTypeIndex: -1, isAdult: 1, courtId: null, courtIndex: -1, description: '', members: [],
+    courseType: null, courseTypeIndex: -1, isAdult: 1, courtId: null, courtIndex: -1, participantCount: '', description: '', members: [],
     timeOptions, endOptions: [], endIndex: -1, startIndex: -1, courseTypes, deductionTypes,
     memberKeyword: '', memberSearchLoading: false, memberResults: [], canSearchMember: true, submitting: false
   },
@@ -58,24 +58,25 @@ Page({
     })
     const startTime = String(course.startTime).slice(11, 16); const endTime = String(course.endTime).slice(11, 16)
     const courseTypeIndex = courseTypes.findIndex(item => Number(item.value) === Number(course.courseType)); const courtIndex = this.data.courts.findIndex(item => Number(item.id) === Number(course.courtId))
-    this.setData({ date: String(course.startTime).slice(0, 10), startTime, endTime, duration: number(course.duration), courseType: Number(course.courseType), courseTypeIndex, isAdult: Number(course.isAdult), courtId: Number(course.courtId), courtIndex, startIndex: timeOptions.indexOf(startTime), endOptions: timeOptions.filter(item => item > startTime), endIndex: timeOptions.filter(item => item > startTime).indexOf(endTime), description: course.description || '' })
+    this.setData({ date: String(course.startTime).slice(0, 10), startTime, endTime, duration: number(course.duration), courseType: Number(course.courseType), courseTypeIndex, isAdult: Number(course.isAdult), courtId: Number(course.courtId), courtIndex, participantCount: Number(course.courseType) === 3 ? String(Number(course.participantCount) || '') : '', startIndex: timeOptions.indexOf(startTime), endOptions: timeOptions.filter(item => item > startTime), endIndex: timeOptions.filter(item => item > startTime).indexOf(endTime), description: course.description || '' })
     this.syncMembers(members)
     wx.setNavigationBarTitle({ title: '修改课程' })
   },
 
-  onDateChange(event) { this.setData({ date: event.detail.value, startTime: '', endTime: '', duration: null, startIndex: -1, endOptions: [], endIndex: -1, courseType: null, courseTypeIndex: -1, isAdult: 1, courtId: null, courtIndex: -1, description: '', memberKeyword: '', memberResults: [] }); this.syncMembers([]) },
+  onDateChange(event) { this.setData({ date: event.detail.value, startTime: '', endTime: '', duration: null, startIndex: -1, endOptions: [], endIndex: -1, courseType: null, courseTypeIndex: -1, isAdult: 1, courtId: null, courtIndex: -1, participantCount: '', description: '', memberKeyword: '', memberResults: [] }); this.syncMembers([]) },
   onStartChange(event) {
     const startTime = timeOptions[Number(event.detail.value)]
-    this.setData({ startTime, startIndex: Number(event.detail.value), endTime: '', duration: null, endOptions: timeOptions.filter(item => item > startTime), endIndex: -1, courseType: null, courseTypeIndex: -1, isAdult: 1, courtId: null, courtIndex: -1, description: '', memberKeyword: '', memberResults: [] })
+    this.setData({ startTime, startIndex: Number(event.detail.value), endTime: '', duration: null, endOptions: timeOptions.filter(item => item > startTime), endIndex: -1, courseType: null, courseTypeIndex: -1, isAdult: 1, courtId: null, courtIndex: -1, participantCount: '', description: '', memberKeyword: '', memberResults: [] })
     this.syncMembers([])
   },
   onEndChange(event) {
     const endTime = this.data.endOptions[Number(event.detail.value)]; const [sh, sm] = this.data.startTime.split(':').map(Number); const [eh, em] = endTime.split(':').map(Number)
-    this.setData({ endTime, endIndex: Number(event.detail.value), duration: (eh * 60 + em - sh * 60 - sm) / 60, courseType: null, courseTypeIndex: -1, isAdult: 1, courtId: null, courtIndex: -1, description: '', memberKeyword: '', memberResults: [] }); this.syncMembers([])
+    this.setData({ endTime, endIndex: Number(event.detail.value), duration: (eh * 60 + em - sh * 60 - sm) / 60, courseType: null, courseTypeIndex: -1, isAdult: 1, courtId: null, courtIndex: -1, participantCount: '', description: '', memberKeyword: '', memberResults: [] }); this.syncMembers([])
   },
-  onCourseTypeChange(event) { const courseTypeIndex = Number(event.detail.value); const courseType = courseTypes[courseTypeIndex].value; this.setData({ courseType, courseTypeIndex, isAdult: 1, courtId: null, courtIndex: -1, description: '', memberKeyword: '', memberResults: [] }); this.syncMembers([]) },
-  onAdultChange(event) { this.setData({ isAdult: Number(event.detail.value), courtId: null, courtIndex: -1, description: '', memberKeyword: '', memberResults: [] }); this.syncMembers([]) },
-  onCourtChange(event) { const courtIndex = Number(event.detail.value); this.setData({ courtIndex, courtId: Number(this.data.courts[courtIndex].id), description: '', memberKeyword: '', memberResults: [] }); this.syncMembers([]) },
+  onCourseTypeChange(event) { const courseTypeIndex = Number(event.detail.value); const courseType = courseTypes[courseTypeIndex].value; this.setData({ courseType, courseTypeIndex, isAdult: 1, courtId: null, courtIndex: -1, participantCount: '', description: '', memberKeyword: '', memberResults: [] }); this.syncMembers([]) },
+  onAdultChange(event) { this.setData({ isAdult: Number(event.detail.value), courtId: null, courtIndex: -1, participantCount: '', description: '', memberKeyword: '', memberResults: [] }); this.syncMembers([]) },
+  onCourtChange(event) { const courtIndex = Number(event.detail.value); this.setData({ courtIndex, courtId: Number(this.data.courts[courtIndex].id), participantCount: '', description: '', memberKeyword: '', memberResults: [] }); this.syncMembers([]) },
+  onParticipantCountInput(event) { this.setData({ participantCount: String(event.detail.value || '') }) },
   onDescriptionInput(event) { this.setData({ description: String(event.detail.value || '').slice(0, 100) }) },
 
   onMemberKeyword(event) {
@@ -112,11 +113,12 @@ Page({
   },
 
   validate() {
-    const { date, startTime, endTime, duration, courseType, isAdult, courtId, members } = this.data
+    const { date, startTime, endTime, duration, courseType, isAdult, courtId, participantCount, members } = this.data
     if (!date || !startTime || !endTime || !duration || courseType === null || !courtId) return '请先完成课程基本信息'
     if (courseType !== 0 && ![0, 1].includes(Number(isAdult))) return '请选择成人或儿童'
-    if (courseType < 0 && members.length) return '体验课不能填写会员'
-    if (courseType >= 0 && !members.length) return '请至少添加一位会员'
+    if (courseType === 3 && (!Number.isInteger(Number(participantCount)) || Number(participantCount) <= 0)) return '请填写单次班课人数'
+    if ((courseType < 0 || courseType === 3) && members.length) return courseType === 3 ? '单次班课不能填写会员' : '体验课不能填写会员'
+    if ([0, 1, 2].includes(courseType) && !members.length) return '请至少添加一位会员'
     if (members.some(member => !memberComplete(member))) return '请完成每位会员的扣费信息'
     for (const member of members) {
       if ([number(member.charge), number(member.times), number(member.annualTimes), number(member.description)].some(value => value < 0 || Math.abs(value * 10 - Math.round(value * 10)) > 1e-8)) return '扣费金额最多保留一位小数'
@@ -127,7 +129,7 @@ Page({
   async submit() {
     const error = this.validate(); if (error) return toast(error)
     if (this.data.submitting) return
-    const course = { courtId: this.data.courtId, startTime: `${this.data.date} ${this.data.startTime}:00`, endTime: `${this.data.date} ${this.data.endTime}:00`, duration: this.data.duration, courseType: this.data.courseType, isAdult: this.data.courseType === 0 ? 1 : this.data.isAdult, description: this.data.description, membersData: this.data.courseType < 0 ? [] : this.data.members.map(item => ({ memberId: item.memberId, charge: number(item.charge), times: number(item.times), annualTimes: number(item.annualTimes), description: number(item.description), quantities: Number(item.quantities) })) }
+    const course = { courtId: this.data.courtId, startTime: `${this.data.date} ${this.data.startTime}:00`, endTime: `${this.data.date} ${this.data.endTime}:00`, duration: this.data.duration, courseType: this.data.courseType, isAdult: this.data.courseType === 0 ? 1 : this.data.isAdult, participantCount: this.data.courseType === 3 ? Number(this.data.participantCount) : 0, description: this.data.description, membersData: this.data.courseType < 0 || this.data.courseType === 3 ? [] : this.data.members.map(item => ({ memberId: item.memberId, charge: number(item.charge), times: number(item.times), annualTimes: number(item.annualTimes), description: number(item.description), quantities: Number(item.quantities) })) }
     this.setData({ submitting: true })
     try {
       const result = await new Promise((resolve, reject) => wx.cloud.callFunction({ name: 'pending_course', data: { action: this.data.mode === 'edit' ? 'update' : 'create', id: this.data.pendingId, coachId: app.globalData.coachContext.coach.id, course }, success: response => resolve(response.result), fail: reject }))

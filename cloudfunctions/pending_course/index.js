@@ -28,7 +28,7 @@ function mapMember(member, memberMap) {
 
 async function list(connection, coachId, coachName = '') {
   const [courses] = await connection.execute(
-    "SELECT id, court_id, DATE_FORMAT(start_time, '%Y-%m-%d %H:%i:%s') AS start_time, DATE_FORMAT(end_time, '%Y-%m-%d %H:%i:%s') AS end_time, duration, course_type, is_adult, description, members_data, DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') AS created_at, DATE_FORMAT(updated_at, '%Y-%m-%d %H:%i:%s') AS updated_at FROM pending_course WHERE coach_id = ? ORDER BY start_time DESC, id DESC", [coachId]
+    "SELECT id, court_id, DATE_FORMAT(start_time, '%Y-%m-%d %H:%i:%s') AS start_time, DATE_FORMAT(end_time, '%Y-%m-%d %H:%i:%s') AS end_time, duration, course_type, is_adult, participant_count, description, members_data, DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') AS created_at, DATE_FORMAT(updated_at, '%Y-%m-%d %H:%i:%s') AS updated_at FROM pending_course WHERE coach_id = ? ORDER BY start_time DESC, id DESC", [coachId]
   )
   const courtIds = [...new Set(courses.map(item => Number(item.court_id)))]
   const parsed = courses.map((item) => ({ ...item, parsedMembers: typeof item.members_data === 'string' ? JSON.parse(item.members_data) : (item.members_data || []) }))
@@ -44,8 +44,8 @@ async function list(connection, coachId, coachName = '') {
   }
   return parsed.map(item => ({
     id: Number(item.id), coachId: Number(coachId), coachName, courtId: Number(item.court_id), courtName: (courtMap.get(Number(item.court_id)) || {}).name || '',
-    startTime: item.start_time, endTime: item.end_time, duration: Number(item.duration), courseType: Number(item.course_type), isAdult: Number(item.is_adult), description: item.description || '',
-    membersData: item.parsedMembers.map(member => mapMember({
+    startTime: item.start_time, endTime: item.end_time, duration: Number(item.duration), courseType: Number(item.course_type), isAdult: Number(item.is_adult), participantCount: Number(item.course_type) === 3 ? Number(item.participant_count || 0) : 0, description: item.description || '',
+    membersData: Number(item.course_type) === 3 ? [] : item.parsedMembers.map(member => mapMember({
       member_id: member.member_id !== undefined ? member.member_id : member.memberId,
       charge: member.charge, times: member.times,
       annual_times: member.annual_times !== undefined ? member.annual_times : member.annualTimes,
@@ -65,8 +65,8 @@ async function create(connection, coachId, course) {
     const referenceError = await ensureReferences(connection, course)
     if (referenceError) { await connection.rollback(); return failure('VALIDATION_FAILED', referenceError) }
     const [result] = await connection.execute(
-      'INSERT INTO pending_course (coach_id, court_id, start_time, end_time, duration, course_type, is_adult, description, members_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [coachId, course.courtId, course.startTime, course.endTime, course.duration, course.courseType, course.isAdult, course.description, JSON.stringify(course.members)]
+      'INSERT INTO pending_course (coach_id, court_id, start_time, end_time, duration, course_type, is_adult, participant_count, description, members_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [coachId, course.courtId, course.startTime, course.endTime, course.duration, course.courseType, course.isAdult, course.participantCount, course.description, JSON.stringify(course.members)]
     )
     const [created] = await connection.execute("SELECT DATE_FORMAT(updated_at, '%Y-%m-%d %H:%i:%s') AS updated_at FROM pending_course WHERE id = ?", [result.insertId])
     await connection.commit()
@@ -78,8 +78,8 @@ async function update(connection, coachId, id, course) {
   const referenceError = await ensureReferences(connection, course)
   if (referenceError) return failure('VALIDATION_FAILED', referenceError)
   const [result] = await connection.execute(
-    'UPDATE pending_course SET court_id = ?, start_time = ?, end_time = ?, duration = ?, course_type = ?, is_adult = ?, description = ?, members_data = ?, updated_at = NOW() WHERE id = ? AND coach_id = ?',
-    [course.courtId, course.startTime, course.endTime, course.duration, course.courseType, course.isAdult, course.description, JSON.stringify(course.members), id, coachId]
+    'UPDATE pending_course SET court_id = ?, start_time = ?, end_time = ?, duration = ?, course_type = ?, is_adult = ?, participant_count = ?, description = ?, members_data = ?, updated_at = NOW() WHERE id = ? AND coach_id = ?',
+    [course.courtId, course.startTime, course.endTime, course.duration, course.courseType, course.isAdult, course.participantCount, course.description, JSON.stringify(course.members), id, coachId]
   )
   if (!result.affectedRows) return failure('PENDING_NOT_FOUND', '课程已被管理员录取或已不存在')
   const [rows] = await connection.execute("SELECT DATE_FORMAT(updated_at, '%Y-%m-%d %H:%i:%s') AS updated_at FROM pending_course WHERE id = ?", [id])
