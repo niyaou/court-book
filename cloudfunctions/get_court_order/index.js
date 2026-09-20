@@ -202,7 +202,10 @@ exports.main = async (event, context) => {
   if (expiredLockedOrders.length > 0) {
     const expiredOrderIds = expiredLockedOrders.map(order => order._id)
     await db.collection('court_order_collection').where({
-      _id: db.command.in(expiredOrderIds)
+      _id: db.command.in(expiredOrderIds),
+      // 扫描和清理之间记录可能已变更，不能删除新的团课占用。
+      status: 'locked',
+      source_type: db.command.neq('GROUP_COURSE')
     }).remove()
     
     // 从orderList中移除已删除的订单

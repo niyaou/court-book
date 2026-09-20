@@ -61,7 +61,9 @@ exports.main = async (event) => {
   const buildCourtOrderQuery = (court_id) => {
     return {
       court_id,
-      campus: orderData.campus
+      campus: orderData.campus,
+      // 普通订场的旧取消请求不能释放后来由团课取得的同一时段。
+      source_type: db.command.neq('GROUP_COURSE')
     }
   }
 

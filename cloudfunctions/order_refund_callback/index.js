@@ -45,7 +45,9 @@ exports.main = async (event) => {
       const updateCourtRes = await db.collection('court_order_collection')
         .where({
           court_id: db.command.in(court_ids),
-          campus: order.campus
+          campus: order.campus,
+          // 重复/迟到的普通订单退款通知不能删除团课占场。
+          source_type: db.command.neq('GROUP_COURSE')
         })
         .remove();
       console.log('court_order_collection 更新结果:', updateCourtRes);

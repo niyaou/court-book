@@ -1,0 +1,37 @@
+<view class="page">
+  <view class="hero">
+    <view class="row"><text class="eyebrow">LD TENNIS · GROUP CLASS</text><button wx:if="{{canCreate}}" class="create" bindtap="createCourse">＋ 创建</button></view>
+    <view class="hero-title">{{scope === 'mine' ? '我的团课' : '公开团课'}}</view>
+    <view class="hero-sub">{{scope === 'mine' ? '报名、成班与退款进度都在这里' : '专业教练带领的小班教学，单次报名更灵活'}}</view>
+    <view class="chips"><text class="chip">精品小班</text><text class="chip">单次报名</text></view>
+  </view>
+  <view class="tabs"><view class="tab {{scope === 'public' ? 'selected' : ''}}" data-scope="public" bindtap="switchScope">团课列表</view><view class="tab {{scope === 'mine' ? 'selected' : ''}}" data-scope="mine" bindtap="switchScope">我的团课</view></view>
+  <scroll-view scroll-x class="filters"><view class="filter {{!campus ? 'active' : ''}}" data-campus="" bindtap="selectCampus">全部</view><view wx:for="{{campuses}}" wx:key="id" class="filter {{campus === item.name ? 'active' : ''}}" data-campus="{{item.name}}" bindtap="selectCampus">{{item.name}}</view></scroll-view>
+  <view wx:if="{{error}}" class="error">{{error}}<view class="link" bindtap="retry">重新加载</view></view>
+  <view wx:if="{{needsAuth}}" class="card auth-card"><view class="small">登录状态由个人中心统一管理。</view><button class="primary" bindtap="goToLogin" loading="{{authorizing}}" disabled="{{authorizing}}">前往个人中心</button></view>
+  <view wx:for="{{items}}" wx:key="id" class="card compact-course campus-{{item.campusTone}}" data-id="{{item.course.id}}" bindtap="openDetail" hover-class="compact-course-pressed" role="button" aria-label="查看{{item.course.title}}详情">
+    <view class="compact-heading">
+      <text class="campus-tag">{{item.course.campus}}</text>
+      <text class="compact-time">{{item.course.timeLabel}}</text>
+      <text class="badge {{item.course.tone}}">{{item.course.statusLabel}}</text>
+    </view>
+    <view class="compact-title">{{item.course.title}}</view>
+    <view class="course-bottom">
+      <view class="course-bottom-info">
+        <view class="compact-meta">
+          <view class="course-meta-item"><image class="course-meta-icon" src="/images/course-court.svg" mode="aspectFit" /><text>{{item.course.courtLabel}}</text></view>
+          <view wx:if="{{item.course.coachName}}" class="course-meta-item course-coach"><image class="course-meta-icon" src="/images/course-coach.svg" mode="aspectFit" /><text>{{item.course.coachName}}</text></view>
+        </view>
+        <view wx:if="{{item.myEnrollment}}" class="compact-enrollment"><text class="badge {{item.myEnrollment.tone}}">{{item.myEnrollment.statusLabel}}</text><text wx:if="{{item.myEnrollment.refundLabel}}">{{item.myEnrollment.refundLabel}}</text></view>
+      </view>
+      <view class="course-price-area">
+        <view class="compact-price"><text class="price-currency">¥</text><text class="compact-amount">{{item.myEnrollment ? item.myEnrollment.actualFeeYuan : item.course.actualFeeYuan}}</text><text wx:if="{{!item.myEnrollment}}" class="compact-price-note">/次</text></view>
+        <view wx:if="{{item.myEnrollment || item.course.isVip}}" class="price-context"><text wx:if="{{item.myEnrollment ? item.myEnrollment.isVip : item.course.isVip}}" class="compact-vip">学员价</text><text wx:if="{{item.myEnrollment}}" class="compact-price-note">报名金额</text></view>
+        <view class="course-footer-action"><text wx:if="{{!item.myEnrollment && (item.course.status === 'PUBLISHED' || item.course.status === 'CONFIRMED')}}" class="compact-seats"><block wx:if="{{item.course.remainingSeats > 0}}">余<text class="seats-count">{{item.course.remainingSeats}}</text>席</block><block wx:else>名额已满</block></text><text class="course-detail-link">›</text></view>
+      </view>
+    </view>
+  </view>
+  <view wx:if="{{!loading && !items.length && !error && !(scope === 'mine' && needsAuth)}}" class="card empty">{{scope === 'mine' ? '还没有报名记录，报名成功、退款中或已取消课程都会保留在这里。' : '课程正在准备中，新团课发布后会第一时间出现在这里。'}}</view>
+  <view wx:if="{{loading}}" class="empty">正在加载课程…</view>
+  <button wx:if="{{nextCursor && !loading}}" class="secondary" bindtap="loadMore">加载更多</button>
+</view>

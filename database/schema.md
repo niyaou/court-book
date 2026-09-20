@@ -35,8 +35,8 @@
 | end_time | string | 是 | 结束时间 HH:mm |
 | status | string | 是 | free / locked / booked。locked=用户锁定待支付，booked=已确定（支付成功或管理员订场） |
 | price | number | 否 | 该时段价格（元） |
-| booked_by | string | 否 | 预订者标识：用户/管理员订场为手机号；畅打占用为 court_rush._id（由 source_type 区分） |
-| source_type | string | 否 | 占用来源：COURT_RUSH=畅打占用，PAY_ORDER=普通预订，空=管理员订场 |
+| booked_by | string | 否 | 预订者标识：用户/管理员订场及团课为手机号；畅打占用为 court_rush._id（由 source_type 区分） |
+| source_type | string | 否 | 占用来源：GROUP_COURSE=团课占用，COURT_RUSH=畅打占用，PAY_ORDER=普通预订，空=历史管理员订场 |
 | version | number | 否 | 乐观锁版本号，更新时自增，默认 1 |
 | created_at | date | 否 | 创建时间 |
 | updated_at | date | 否 | 更新时间，locked 订单据此判断超时释放 |
@@ -91,6 +91,7 @@
 |------|------|------|------|
 | _id | string | 是 | 云开发主键 |
 | phoneNumber | string | 是 | 管理员手机号，用于权限校验 |
+| name | string | 团课授课候选必填 | 人员姓名；同时具备非空 phoneNumber 才进入团课授课候选 |
 | password | string | 否 | 管理员密码，admin_refund_order 校验用 |
 | specialManager | number | 否 | 0 或 1，1 表示特殊管理员（可查全部已支付订单、可退款） |
 | courtRushManager | number | 否 | 0 或 1，1 表示畅打管理员（可发起畅打）；权限低于 specialManager，specialManager=1 时天然具备畅打权限 |
@@ -225,3 +226,21 @@
 - **MySQL**：club_member（查 prepaid_card 按 number=phoneNumber）、charged_list（charge + prepaid_card）、spend_list（spend + prepaid_card + course + court + coach）。表结构未在本文档维护，见各业务文档或 DBA。
 - **微信 openid**：getopenId 仅返回 openid/appid/unionid，不落库。
 - **baseNumber**：通过微信 code 换手机号，不直接写云开发集合。
+
+
+## 团课数据源边界（2026-09-06）
+
+| 数据 | 数据源 | 关系 |
+|---|---|---|
+| 管理员及团课授课人员 | CloudBase `manager` | 团课复用现有人员集合，不新建 CloudBase coach |
+| 团课场地 | CloudBase `court` | 有记录时course.courtId指向court._id；bookingManaged=false且无记录时使用默认1/2号场逻辑标识；campus关联campus.name |
+| 团课校区 | CloudBase `campus` | 新增校区开关与 bookingManaged；不能使用 MySQL court.id 代替 |
+| 教学内容预设 | CloudBase `group_course_template` | 只存标题详情及启用、排序 |
+| 团课业务记录 | CloudBase `group_course`、`group_course_enrollment`、`group_course_payment`、`group_course_refund` | 不与 MySQL course/coach/course_member 互写 |
+| 共享占场 | CloudBase `court_order_collection` | GROUP_COURSE + group_course_id 标识归属 |
+| VIP | 通过 `club_member` 读取 MySQL `prepaid_card` | list/detail/enroll 查询；团课不直接连接 MySQL，非云数据库同名集合 |
+| 原有教练填报模块 | MySQL `coach`、`court`、`course` 等 | 保持原逻辑；不因团课复用 manager 而改动 |
+
+团课授课候选不要求 enabled/isCoach：manager.name 与 phoneNumber 均非空即可；coachId 引用 manager._id，介绍为空。初始化样例和部署验收步骤以 Obsidian「court-book/团课部署与验收」及同步的团课设计为准。不要因为同名表而混用 CloudBase 文档 ID 与 MySQL 主键。
+
+团课价格字段：`group_course.priceYuan`与`group_course.vipPriceYuan`均手填正整数元，VIP不高于原价，转分后为安全整数。默认场地courtId为`group_course_default_`加`hash(campus.name, courtNumber)`（SHA-256前32位），编号为字符串1或2；不创建court，发布时重新校验校区启用、bookingManaged=false且无court记录。不新增集合或索引；用户确认无旧正式课程，无需价格迁移。

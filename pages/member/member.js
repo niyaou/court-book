@@ -438,6 +438,12 @@ Page({
     wx.showToast({ title: '登录成功', icon: 'success' });
     this.getMemberInfo();
     const redirect = wx.getStorageSync('postLoginRedirect');
+    if (redirect && ['groupCourse', 'groupCourseForm', 'groupCourseDetail'].includes(redirect.page)) {
+      wx.removeStorageSync('postLoginRedirect');
+      if (redirect.page === 'groupCourse') wx.switchTab({ url: '/pages/groupCourse/groupCourse' });
+      else if (redirect.page === 'groupCourseForm') wx.navigateTo({ url: '/pages/groupCourseForm/groupCourseForm' });
+      else if (redirect.courseId) wx.navigateTo({ url: '/pages/groupCourseDetail/groupCourseDetail?courseId=' + encodeURIComponent(redirect.courseId) });
+    }
     if (redirect && redirect.page === 'rushDetail' && redirect.rushId) {
       wx.removeStorageSync('postLoginRedirect');
       wx.navigateTo({ url: `/pages/rushDetail/rushDetail?rushId=${redirect.rushId}` });

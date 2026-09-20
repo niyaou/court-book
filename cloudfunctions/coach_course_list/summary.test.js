@@ -8,7 +8,10 @@ assert.strictEqual(equivalentPeople(2, 2), 2)
 assert.strictEqual(equivalentPeople(2, 0), 0)
 assert.strictEqual(equivalentPeople(0, 2), 0)
 assert.strictEqual(equivalentPeople(-1, 1), 0)
-assert.strictEqual(equivalentPeople(3, 1), 0)
+assert.strictEqual(equivalentPeople(3, 0, 1), 1)
+assert.strictEqual(equivalentPeople(3, 99, 8), 8)
+assert.strictEqual(equivalentPeople(3, 0, 1.5), 0)
+assert.strictEqual(equivalentPeople(3, 0, 0), 0)
 
 assert.deepStrictEqual(summarizeCourses([
   { courseType: -2, duration: 0.5, quantities: 0 },
@@ -16,12 +19,13 @@ assert.deepStrictEqual(summarizeCourses([
   { courseType: 0, duration: 2, quantities: 3 },
   { courseType: 1, duration: 1.5, quantities: 4 },
   { courseType: 2, duration: 1, quantities: 1 },
-  { courseType: 2, duration: 1, quantities: 0 }
+  { courseType: 2, duration: 1, quantities: 0 },
+  { courseType: 3, duration: 2, quantities: 0, participantCount: 8 }
 ], '2026-08'), {
   month: '2026-08',
-  totalCourses: 5,
-  totalDuration: 5,
-  equivalentTotalPeople: 6
+  totalCourses: 6,
+  totalDuration: 7,
+  equivalentTotalPeople: 14
 })
 
 console.log('coach_course_list monthly summary tests passed')

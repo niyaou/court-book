@@ -34,7 +34,9 @@
 
 统一分页请求页码从 1 开始，响应 `number` 从 0 开始。`RechargeNoticeDTO` 固定包含 `id`、`coachId`、`coachName`、`coachActive`、`memberId`、`memberName`、`memberNumber`、`memberActive`、`rechargeDate`、`note`、`status`、`version`、`createdAt`、`updatedAt`、`acknowledgedAt`。业务日期使用 `YYYY-MM-DD`，时间使用 `YYYY-MM-DD HH:mm:ss`，前端不得把这些字符串交给 JavaScript `Date` 再做时区换算。
 
-录取请求中的 `course` 至少包含：`coachId`、`courtId`、`startTime`、`endTime`、`duration`、`courseType`、`isAdult`、`description` 和 `membersData`。每个会员消费项使用 `memberId`、`charge`、`times`、`annualTimes`、`description`、`quantities`。
+录取请求中的 `course` 至少包含：`coachId`、`courtId`、`startTime`、`endTime`、`duration`、`courseType`、`isAdult`、`participantCount`、`description` 和 `membersData`。每个会员消费项使用 `memberId`、`charge`、`times`、`annualTimes`、`description`、`quantities`。`courseType=3` 表示“单次班课”：`participantCount` 必须为正整数，`membersData` 必须为空；其他课程类型的 `participantCount` 统一为 `0`。数据库在 `pending_course` 与正式 `course` 中均使用 `participant_count` 保存该字段。
+
+管理员录取单次班课时只创建正式 `course`，不得创建虚拟会员，不写 `spend` 或 `course_member`，也不发生会员余额或次数扣减。待审列表、统一教练填报列表、录取请求及正式课列表必须完整透传 `participantCount`。
 
 关键错误码：`PENDING_UPDATED`、`PENDING_NOT_FOUND`、`COURSE_DUPLICATE`、`INVALID_MEMBER_SPEND`、`DUPLICATE_MEMBER`、`COACH_NOT_FOUND`、`COURT_NOT_FOUND`、`MEMBER_NOT_FOUND`、`FORMAL_CREATED_PENDING_DELETE_FAILED`、`INTERNAL_ERROR`。管理端统一使用既有 notify 展示，`PENDING_UPDATED` 与 `PENDING_NOT_FOUND` 后刷新列表。
 
@@ -44,13 +46,13 @@
 - `pending_course`：`create`、`list`、`update`、`delete`；只读/写 `pending_course`。
 - `recharge_notice`：`create`、`list`、`update`、`delete`；只读/写 `coach_recharge_notice`。备注去除首尾空白后长度为 1 到 500；充值日期由北京时间 MySQL 会话的 `CURRENT_DATE()` 生成。修改携带内容版本；修改已知悉记录会增加版本、清空知悉时间并重新变为 `PENDING`，只有 `PENDING` 可以删除。
 - `member_search`：姓名模糊搜索，最多 20 条，返回余额字段。
-- `coach_course_list`：只读当前教练当前自然月及前两个月的正式课；范围固定按 `Asia/Shanghai`，每页 30 条。响应额外返回不受分页影响的 `currentMonthSummary`，固定统计当前自然月的授课课程数量、总课程时长和等效总人数；授课课程含体验课、班课、私教，不含订场，等效人数沿用效率统计口径。
+- `coach_course_list`：只读当前教练当前自然月及前两个月的正式课；范围固定按 `Asia/Shanghai`，每页 30 条。响应额外返回不受分页影响的 `currentMonthSummary`，固定统计当前自然月的授课课程数量、总课程时长和等效总人数；授课课程含体验课、班课、私教、单次班课，不含订场。单次班课每条正式课程计一节，时长照常累计，等效人数直接使用 `participantCount`，一名填报人数计一名等效人数。
 
-云函数业务时间也使用 `YYYY-MM-DD HH:mm:ss`。教练提交的 `startTime`、`endTime` 作为中国业务本地字符串直接绑定到 MySQL `DATETIME`，不得先转换为 UTC；待审列表与正式课列表用 `DATE_FORMAT` 返回同一格式。正式课三自然月范围通过 `Intl` 显式按 `Asia/Shanghai` 计算，不能使用云函数运行时本地时区。`course_type` 为 `-2/-1/0/1/2`；订场 `is_adult` 继续沿用正式课程的实际字段值与默认语义。
+云函数业务时间也使用 `YYYY-MM-DD HH:mm:ss`。教练提交的 `startTime`、`endTime` 作为中国业务本地字符串直接绑定到 MySQL `DATETIME`，不得先转换为 UTC；待审列表与正式课列表用 `DATE_FORMAT` 返回同一格式。正式课三自然月范围通过 `Intl` 显式按 `Asia/Shanghai` 计算，不能使用云函数运行时本地时区。`course_type` 为 `-2/-1/0/1/2/3`；订场 `is_adult` 继续沿用正式课程的实际字段值与默认语义。
 
 ## 4. 部署顺序
 
-1. 执行数据库迁移并检查表、索引和权限。
+1. 执行数据库迁移并检查表、索引和权限；确认 `pending_course.participant_count` 与 `course.participant_count` 已存在后再部署读取这些字段的服务和云函数。
 2. 部署 `ledong-db`，确认新路由可用且旧 Excel 录课接口仍可用。
 3. 安装并部署 `recharge_notice` 等五个云函数依赖，写入配置并在微信环境验证教练身份、MySQL 连接和日志。
 4. 发布 `ledong-tennis/material-kit-react` 管理端版本。
@@ -67,14 +69,16 @@
 2. 管理端“教练填报课程”页面显示课程，按校区分组；展开会员明细、欠费确认、手动刷新均正常。
 3. 管理员录取后，确认正式课程可见，`spend` 与 `course_member` 已写入，余额/次数按既有逻辑扣减，待审记录被物理删除。
 4. 管理端立即刷新后不再显示已录取课程；小程序待审页刷新后也不再显示该课程。
-5. 教练选择“用户充值”，选定单个会员并填写备注；提交后小程序与管理端待处理时间流均可见，且四张正式业务表没有新增记录。
-6. 管理员知悉后记录进入双方已知悉历史；教练修改该历史记录后，版本增加且记录重新进入待处理。
+5. 教练新增单次班课时不选择会员，填写正整数人数；待审列表显示该人数，管理员录取后只新增正式课程，不新增 `spend`、`course_member` 或会员扣费记录。
+6. 单次班课录取后在正式课列表显示上报人数，并按一节课程及上报人数 1:1 进入教练本月汇总。
+7. 教练选择“用户充值”，选定单个会员并填写备注；提交后小程序与管理端待处理时间流均可见，且四张正式业务表没有新增记录。
+8. 管理员知悉后记录进入双方已知悉历史；教练修改该历史记录后，版本增加且记录重新进入待处理。
 
 ### 异常与边界
 
 1. 管理员加载待审课后，教练修改该课程；录取应返回 `PENDING_UPDATED`，不创建正式课。
 2. 教练编辑页中的待审课已被录取/删除；保存或删除应返回 `PENDING_NOT_FOUND`，小程序提示后退出或移除本地卡片。
-3. 检查体验课、订场、班课、私教；特别验证订场 `isAdult` 与既有正式录课保持一致。
+3. 检查体验课、订场、班课、私教、单次班课；特别验证订场 `isAdult` 与既有正式录课保持一致，单次班课拒绝零、负数、小数人数及任何会员明细。
 4. 验证课时费为 0、次卡/年卡最小 0.5、重复会员拒绝、无效会员/校区/教练的错误提示。
 5. 在北京时间月初、跨年和二月检查正式课“三自然月”范围；云函数运行时区变化不应改变结果。
 6. 同一教练、同一会员、同一北京时间日期重复上报应被拒绝；不同教练或不同日期允许上报。

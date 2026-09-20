@@ -29,7 +29,11 @@ exports.main = async (event) => {
   // 批量更新 court_order_collection，把 court_id 在 court_ids 里的 status 改为 'booked'
   if (court_ids && court_ids.length > 0) {
     const updateCourtRes = await db.collection('court_order_collection')
-      .where({ court_id: db.command.in(court_ids) })
+      .where({
+        court_id: db.command.in(court_ids),
+        // 团课的占用由自身发布事务维护，不接受普通支付回调覆盖。
+        source_type: db.command.neq('GROUP_COURSE')
+      })
       .update({ data: { status: 'booked' } });
     console.log('court_order_collection 更新结果:', updateCourtRes);
   }

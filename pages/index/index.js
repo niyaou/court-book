@@ -100,13 +100,9 @@ Page({
     });
   },
 
-  // 团课页面尚未注册时提供明确反馈，避免跳转到不存在的页面
+  // 团课为一级 Tab，与底部导航使用同一入口。
   navigateToGroupCourse: function() {
-    wx.showToast({
-      title: '团课功能正在准备中',
-      icon: 'none',
-      duration: 1800
-    })
+    wx.switchTab({ url: '/pages/groupCourse/groupCourse' })
   },
 
   // 畅打是底部 Tab，使用 switchTab 进入现有页面

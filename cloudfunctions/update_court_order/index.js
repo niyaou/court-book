@@ -58,6 +58,15 @@ exports.main = async (event, ) => {
       _
     )
 
+    // 场地可能在两次检查之间被团课或其他订单占用；失败不能进入付款流程。
+    if (!transactionResult.success || transactionResult.results.length !== dataList.length) {
+      return {
+        success: false,
+        error: '场地状态已变化，请刷新后重新选择',
+        results: transactionResult.results
+      }
+    }
+
     // 第三阶段：管理员预订时，直接创建 pay_order 记录（只建立一条）
     // 解决：管理员场地已 booked 但未点确定导致无法取消的问题
     const bookedBy = dataList[0]?.booked_by
@@ -289,7 +298,8 @@ async function executeTransaction(operations, db, _) {
           .where({
             court_id: op.court_id,
             campus: op.campus,
-            version: op.version
+            version: op.version,
+            source_type: db.command.neq('GROUP_COURSE')
           })
           .update({
             data: op.data
@@ -367,6 +377,18 @@ async function executeTransaction(operations, db, _) {
           op => !existingIds.has(op.court_id)
         )
 
+        // 即使所有时段均被过滤，也必须返回失败，不能让空 results 被 every() 当成成功。
+        operations.adds
+          .filter(op => existingIds.has(op.court_id))
+          .forEach(op => {
+            results.push({
+              court_id: op.court_id,
+              success: false,
+              error: '并发冲突，订单已被其他用户创建',
+              type: 'add'
+            })
+          })
+
         if (validAddOperations.length > 0) {
           // 批量插入有效的订单
           const addRes = await db.collection('court_order_collection').add({
@@ -384,17 +406,6 @@ async function executeTransaction(operations, db, _) {
             })
           })
 
-          // 记录被过滤掉的订单（因为并发冲突）
-          operations.adds
-            .filter(op => existingIds.has(op.court_id))
-            .forEach(op => {
-              results.push({
-                court_id: op.court_id,
-                success: false,
-                error: '并发冲突，订单已被其他用户创建',
-                type: 'add'
-              })
-            })
         }
       } catch (e) {
         // 插入异常，需要回滚所有已成功的操作
@@ -462,7 +473,10 @@ async function rollbackUpdates(successfulUpdates, db) {
       await db.collection('court_order_collection')
         .where({
           court_id: update.court_id,
-          campus: update.campus
+          campus: update.campus,
+          // 只回滚本次写入版本；不能覆盖后来成功取得场地的团课。
+          version: update.data.version,
+          source_type: db.command.neq('GROUP_COURSE')
         })
         .update({
           data: {
@@ -496,7 +510,10 @@ async function rollbackAdds(successfulAdds, db) {
       await db.collection('court_order_collection')
         .where({
           court_id: add.court_id,
-          campus: add.campus
+          campus: add.campus,
+          version: add.data.version,
+          booked_by: add.data.booked_by,
+          source_type: db.command.neq('GROUP_COURSE')
         })
         .remove()
     } catch (e) {
