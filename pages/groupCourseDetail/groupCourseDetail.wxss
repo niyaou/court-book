@@ -14,6 +14,25 @@
   overflow-wrap: break-word;
 }
 .banner-heading .badge { flex-shrink: 0; margin-top: 8rpx; }
+.course-description-heading { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; margin-bottom: 20rpx; }
+.course-description-heading .section-title { margin-bottom: 0; }
+.course-share {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 12rpx;
+  margin: 0;
+  padding: 10rpx 16rpx;
+  border-radius: 28rpx;
+  background: #fff;
+  color: #138dcc;
+  font-size: 24rpx;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.course-share::after { border: 1rpx solid #c8e8f8; border-radius: 28rpx; }
+.course-share-icon { width: 36rpx; height: 36rpx; flex-shrink: 0; }
+.course-share-pressed { background: #e8f6fd; }
 .banner-time {
   display: flex;
   align-items: baseline;

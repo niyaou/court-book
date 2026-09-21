@@ -36,6 +36,7 @@ Page({
     paymentConfirmation: null,
   },
   onLoad(options) {
+    wx.hideShareMenu();
     this._unwatchPermissions = api.watchPermissions(() => { this.syncPermission(); this.loadDetail(); });
     this.setData({ courseId: options.courseId || "" });
   },
@@ -43,6 +44,7 @@ Page({
     this.setData({ canManage: api.canCreateCourse() });
   },
   onShow() {
+    this.syncShareMenu();
     this.syncPermission();
     this.stopTimer();
     this._visible = true;
@@ -62,6 +64,13 @@ Page({
     this._visible = false;
     clearInterval(this._timer);
     this._timer = null;
+  },
+  syncShareMenu() {
+    if (this.data.course && this.data.course.status !== "CANCELLED") {
+      wx.showShareMenu({ menus: ["shareAppMessage"] });
+    } else {
+      wx.hideShareMenu();
+    }
   },
   tick() {
     const enrollment = this.data.enrollment;
@@ -133,6 +142,7 @@ Page({
         refundSummary: data.refundSummary || null,
         error: "",
       });
+      this.syncShareMenu();
       this.tick();
     } catch (e) {
       this.showError(e);
@@ -189,6 +199,7 @@ Page({
         refundSummary: null,
       });
     this.setData(patch);
+    this.syncShareMenu();
   },
   goToLogin() {
     wx.setStorageSync("postLoginRedirect", { page: "groupCourseDetail", courseId: this.data.courseId || "" });
@@ -384,8 +395,16 @@ Page({
     this.loadDetail();
   },
   onShareAppMessage() {
+    const course = this.data.course;
+    const title = course
+      ? [
+          course.title || "乐动网球 · 公开团课",
+          course.timeLabel,
+          [course.campus, course.courtLabel].filter(Boolean).join(" "),
+        ].filter(Boolean).join("｜")
+      : "乐动网球 · 公开团课";
     return {
-      title: this.data.course ? this.data.course.title : "乐动网球 · 公开团课",
+      title,
       path:
         "/pages/groupCourseDetail/groupCourseDetail?courseId=" +
         encodeURIComponent(this.data.courseId),
