@@ -17,7 +17,16 @@
       <view wx:else class="banner-address">请联系教练确认详细地址</view>
       <view wx:if="{{location.hint}}" class="banner-location-hint">{{location.hint}}</view>
     </view>
-    <view class="card"><view class="section-title">课程说明</view><view class="text-body">{{course.description}}</view></view>
+    <view class="card">
+      <view class="course-description-heading">
+        <view class="section-title">课程说明</view>
+        <button wx:if="{{course.status !== 'CANCELLED'}}" class="course-share" open-type="share" hover-class="course-share-pressed" aria-label="分享课程给好友或微信群">
+          <image class="course-share-icon" src="/images/course-share.svg" mode="aspectFit" />
+          <text>分享课程</text>
+        </button>
+      </view>
+      <view class="text-body">{{course.description}}</view>
+    </view>
     <view class="card"><view class="section-title">授课教练</view><view class="coach"><view class="coach-initial">教</view><view><view class="title">{{course.coachName}}</view><view class="small muted">{{course.coachIntroduction || '课程教学由本节授课教练负责'}}</view></view></view></view>
     <view class="card"><view class="section-title">开课进度</view><view class="row small muted"><text>已支付 {{course.paidCount}} 人</text><text>最低 {{course.minParticipants}} 人 / 上限 {{course.maxParticipants}} 人</text></view><view class="progress-track"><view class="progress-fill" style="width:{{course.progress}}%"></view></view><view class="small muted">剩余 {{course.remainingSeats}} 席，待付款与退款中报名也会占用名额。</view></view>
     <view class="card"><view class="section-title">报名与退款</view><view class="rule"><text class="rule-number">1</text><text>请在创建付款单后2分钟内完成付款。</text></view><view class="rule"><text class="rule-number">2</text><text>报名截止：{{course.deadlineLabel}}。截止后3分钟确定是否成班，未成班自动全额退款。</text></view><view class="rule"><text class="rule-number">3</text><text>距开课超过12小时可申请全额退款，12小时内（含）不可自行取消。退款到账后释放名额；到账状态以系统确认为准。</text></view></view>

@@ -16,6 +16,8 @@ function loadPage(name, api, wxOverrides = {}) {
     redirectTo() {},
     navigateTo() {},
     switchTab() {},
+    showShareMenu() {},
+    hideShareMenu() {},
     showModal: (options) => options.success({ confirm: true }),
     ...wxOverrides,
   };
@@ -69,6 +71,29 @@ const fakeApi = (overrides) => ({
   hasAuth: () => true,
   call: async () => ({}),
   ...overrides,
+});
+test("detail disables sharing until loaded and after course cancellation", async () => {
+  let status = "PUBLISHED";
+  let shareVisible = true;
+  const { page } = loadPage("groupCourseDetail", fakeApi({
+    call: async () => ({
+      course: { status, startAt: now, endAt: now + 3600000 },
+      viewer: {},
+    }),
+  }), {
+    showShareMenu: () => { shareVisible = true; },
+    hideShareMenu: () => { shareVisible = false; },
+  });
+  page.onLoad({ courseId: "course" });
+  assert.equal(shareVisible, false);
+  await page.loadDetail();
+  assert.equal(shareVisible, true);
+  status = "CANCELLED";
+  await page.loadDetail();
+  assert.equal(shareVisible, false);
+  page.onShow();
+  assert.equal(shareVisible, false);
+  page.onUnload();
 });
 test("detail refresh and map action follow the current campus without requesting user location", async () => {
   let campus = "麓坊校区";
