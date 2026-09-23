@@ -9,11 +9,16 @@ function uploadAvatarToCloud(filePath, phoneNumber) {
   const baseName = (phoneNumber && typeof phoneNumber === 'string' && phoneNumber.trim())
     ? phoneNumber.trim()
     : `${Date.now()}_${Math.random().toString(36).slice(2)}`;
-  const cloudPath = `avatars/${baseName}.${ext}`;
+  // 每次选择使用新地址，避免覆盖同名文件后仍显示旧头像缓存。
+  const version = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  const cloudPath = `avatars/${baseName}_${version}.${ext}`;
   return wx.cloud.uploadFile({
     cloudPath,
     filePath,
-  }).then((res) => res.fileID);
+  }).then((res) => {
+    if (!res || !res.fileID) throw new Error('头像上传未返回文件地址');
+    return res.fileID;
+  });
 }
 
 function normalizeUserProfile(input) {
