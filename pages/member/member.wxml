@@ -106,12 +106,12 @@
           <image wx:if="{{pendingProfile.avatarUrl}}" class="avatar-preview" src="{{pendingProfile.avatarUrl}}" mode="aspectFill"></image>
           <view wx:else class="avatar-preview-placeholder">头像</view>
         </view>
-        <button class="avatar-choose-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+        <button class="avatar-choose-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar" disabled="{{profileSubmitting}}">
           {{pendingProfile.avatarUrl ? '点击可更换头像' : '选择头像'}}
         </button>
       </view>
-      <input class="nickname-input" type="nickname" placeholder="请输入昵称" value="{{pendingProfile.nickName}}" bindinput="onNicknameInput" />
-      <button class="complete-btn" bindtap="confirmProfileAndLogin">完成登录</button>
+      <input class="nickname-input" type="nickname" placeholder="请输入昵称" value="{{pendingProfile.nickName}}" bindinput="onNicknameInput" disabled="{{profileSubmitting}}" />
+      <button class="complete-btn" bindtap="confirmProfileAndLogin" loading="{{profileSubmitting}}" disabled="{{profileSubmitting}}">{{profileSubmitting ? '正在保存' : '完成登录'}}</button>
     </view>
   </view>
 </view>

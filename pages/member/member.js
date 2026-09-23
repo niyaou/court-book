@@ -22,6 +22,7 @@ Page({
       avatarUrl: ''
     },
     needsProfileCompletion: false,
+    profileSubmitting: false,
     showAddCourtModal: false,
     campus: '',
     courtNumber: '',
@@ -85,6 +86,7 @@ Page({
     wx.cloud.getTempFileURL({
       fileList: [avatarUrl],
       success: (res) => {
+        if (this.data.wxUserProfile.avatarUrl !== avatarUrl) return;
         const list = res.fileList || [];
         const file = list[0] || {};
         const tempUrl = file.tempFileURL || '';
@@ -93,6 +95,7 @@ Page({
         });
       },
       fail: () => {
+        if (this.data.wxUserProfile.avatarUrl !== avatarUrl) return;
         this.setData({
           'wxUserProfile.avatarUrlForDisplay': avatarUrl
         });
@@ -101,6 +104,12 @@ Page({
   },
 
   syncLoginViewState: function() {
+    // 从相册/头像编辑返回会重新显示页面，资料确认前保留已授权手机号和填写草稿。
+    // chooseAvatar 回调可能在 onShow 前后到达，不能用未完成的缓存登录态覆盖草稿。
+    if (this.data.needsProfileCompletion && this.data.pendingPhoneNumber) {
+      return;
+    }
+
     const phoneNumber = wx.getStorageSync('phoneNumber');
     const profile = normalizeUserProfile(this.data.wxUserProfile);
 
@@ -149,6 +158,7 @@ Page({
   },
 
   ensureCloudAvatar: async function() {
+    if (this.data.needsProfileCompletion) return;
     const phoneNumber = this.data.phoneNumber || wx.getStorageSync('phoneNumber');
     const profile = this.data.wxUserProfile || {};
     const avatarUrl = (profile.avatarUrl && profile.avatarUrl.trim()) || '';
@@ -159,11 +169,20 @@ Page({
     console.log('avatar upload start (member onShow)', avatarUrl);
     try {
       const newUrl = await uploadAvatarToCloud(avatarUrl, phoneNumber);
+      // 上传期间可能已完成另一份资料，旧请求不得回写新登录状态。
+      const storedProfile = wx.getStorageSync('userProfile') || {};
+      const currentProfile = app.globalData.userProfile || {};
+      if (this.data.needsProfileCompletion || this.data.phoneNumber !== phoneNumber ||
+          wx.getStorageSync('phoneNumber') !== phoneNumber ||
+          this.data.wxUserProfile.avatarUrl !== avatarUrl ||
+          this.data.wxUserProfile.nickName !== nickName ||
+          storedProfile.avatarUrl !== avatarUrl || currentProfile.avatarUrl !== avatarUrl) return;
       console.log('avatar upload success (member onShow)', newUrl);
       const updated = { nickName: nickName || '微信用户', avatarUrl: newUrl };
       this.setData({ wxUserProfile: updated });
       this.ensureAvatarDisplayUrl(updated);
       wx.setStorageSync('userProfile', updated);
+      wx.setStorageSync('userInfo', updated);
       app.globalData.userProfile = updated;
       app.globalData.userInfo = updated;
     } catch (e) {
@@ -192,6 +211,7 @@ Page({
   },
 
   onShow: function() {
+    if (this.data.needsProfileCompletion && this.data.pendingPhoneNumber) return;
     this.hydrateUserProfile();
     this.syncLoginViewState();
     this.ensureCloudAvatar();
@@ -384,6 +404,7 @@ Page({
   },
 
   onChooseAvatar: function(e) {
+    if (this.data.profileSubmitting) return;
     const avatarUrl = e && e.detail && e.detail.avatarUrl;
     if (!avatarUrl) {
       return;
@@ -394,6 +415,7 @@ Page({
   },
 
   onNicknameInput: function(e) {
+    if (this.data.profileSubmitting) return;
     const nickName = (e && e.detail && e.detail.value ? e.detail.value : '').trim();
     this.setData({
       'pendingProfile.nickName': nickName
@@ -403,6 +425,7 @@ Page({
   noop: function() {},
 
   confirmProfileAndLogin: async function() {
+    if (this.data.profileSubmitting) return;
     const { pendingPhoneNumber, pendingProfile } = this.data;
     if (!pendingPhoneNumber) {
       wx.showToast({ title: '请先完成手机号授权', icon: 'none' });
@@ -413,6 +436,18 @@ Page({
     if (!nickName || !avatarUrl) {
       wx.showToast({ title: '请补充头像和昵称', icon: 'none' });
       return;
+    }
+    this.setData({ profileSubmitting: true });
+    try {
+      if (isTempAvatarPath(avatarUrl)) {
+        avatarUrl = await uploadAvatarToCloud(avatarUrl, pendingPhoneNumber);
+      }
+    } catch (error) {
+      console.error('保存登录头像失败:', error);
+      wx.showToast({ title: '头像保存失败，请重试', icon: 'none' });
+      return;
+    } finally {
+      this.setData({ profileSubmitting: false });
     }
     const profile = { nickName, avatarUrl };
 
