@@ -3,6 +3,71 @@ const cloud = require('wx-server-sdk')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV }) // 使用当前云环境
 
+// 与 update_court_order 的普通用户五分钟接管期限一致。
+const BOOKING_LOCK_DURATION_MS = 5 * 60 * 1000
+const PAYMENT_TIMEOUT_MINUTES = 2
+const PAYMENT_SAFETY_MARGIN_MS = 10 * 1000
+
+function bookingLockFailure(error, message) {
+  return { success: false, error, message }
+}
+
+async function checkBookingLocks(db, courtIds, campus, phoneNumber, previousLocks) {
+  try {
+    const records = []
+    // 分批并分页读取，既检查所有请求时段，也不能漏掉重复占场记录。
+    for (let start = 0; start < courtIds.length; start += 20) {
+      const ids = courtIds.slice(start, start + 20)
+      for (let offset = 0; ; offset += 100) {
+        const result = await db.collection('court_order_collection').where({
+          campus,
+          court_id: db.command.in(ids)
+        }).orderBy('_id', 'asc').skip(offset).limit(100).get()
+        records.push(...result.data)
+        if (result.data.length < 100) break
+      }
+    }
+
+    const now = Date.now()
+    const locks = new Map()
+    let lockDeadline = Infinity
+    for (const record of records) {
+      if (locks.has(record.court_id)) {
+        return bookingLockFailure('BOOKING_LOCK_DATA_ERROR', '场地数据异常，请刷新重试或联系管理员')
+      }
+      if (record.campus !== campus || record.status !== 'locked' ||
+          record.booked_by !== phoneNumber ||
+          record.source_type === 'GROUP_COURSE' || record.source_type === 'COURT_RUSH') {
+        return bookingLockFailure('BOOKING_LOCK_CONFLICT', '场地状态已变化，请刷新后重新选择时段')
+      }
+      const rawTime = record.updated_at
+      const updatedAt = rawTime instanceof Date || typeof rawTime === 'string' || typeof rawTime === 'number'
+        ? new Date(rawTime).getTime() : NaN
+      if (!record._id || !Number.isFinite(updatedAt) || updatedAt > now) {
+        return bookingLockFailure('BOOKING_LOCK_DATA_ERROR', '场地数据异常，请刷新重试或联系管理员')
+      }
+      const previous = previousLocks && previousLocks.get(record.court_id)
+      if (previousLocks && (!previous || previous.id !== record._id ||
+          previous.version !== record.version || previous.updatedAt !== updatedAt)) {
+        return bookingLockFailure('BOOKING_LOCK_CONFLICT', '场地状态已变化，请刷新后重新选择时段')
+      }
+      locks.set(record.court_id, { id: record._id, version: record.version, updatedAt })
+      lockDeadline = Math.min(lockDeadline, updatedAt + BOOKING_LOCK_DURATION_MS)
+    }
+    if (courtIds.some(id => !locks.has(id))) {
+      return bookingLockFailure('BOOKING_LOCK_MISSING', '预订已失效，请刷新后重新选择时段')
+    }
+    const paymentExpireTime = new Date(now + PAYMENT_TIMEOUT_MINUTES * 60 * 1000)
+    if (paymentExpireTime.getTime() + PAYMENT_SAFETY_MARGIN_MS >= lockDeadline) {
+      return bookingLockFailure('BOOKING_LOCK_EXPIRED', '预订已过期或剩余付款时间不足，请刷新后重新选择时段')
+    }
+    return { success: true, locks, paymentExpireTime }
+  } catch (error) {
+    console.error('[pay_order_create] 锁场校验失败', error)
+    return bookingLockFailure('BOOKING_LOCK_CHECK_FAILED', '暂时无法确认场地状态，请稍后重试')
+  }
+}
+
 function formatTimeExpire(date) {
   // 确保使用北京时间（UTC+8）
   // 将UTC时间转换为北京时间：UTC+8
@@ -194,12 +259,18 @@ exports.main = async (event, ) => {
   const { phoneNumber,  openid,  court_ids  ,nonceStr,campus } = event
   const db = cloud.database()
 
-  if (!Array.isArray(court_ids) || court_ids.length === 0) {
+  if (!Array.isArray(court_ids) || court_ids.length === 0 ||
+      court_ids.some(id => typeof id !== 'string' || !id.trim()) ||
+      new Set(court_ids).size !== court_ids.length) {
     return {
       success: false,
       message: '所选场地无效',
       error: 'INVALID_COURT_IDS'
     }
+  }
+  if (typeof phoneNumber !== 'string' || !phoneNumber.trim() ||
+      typeof campus !== 'string' || !campus.trim()) {
+    return bookingLockFailure('INVALID_BOOKING_INPUT', '预订资料不完整，请刷新后重新选择时段')
   }
   
   // 管理员预订时 pay_order 已在 update_court_order 中创建，此处不应重复调用
@@ -234,6 +305,9 @@ exports.main = async (event, ) => {
     };
   }
 
+  const initialLockCheck = await checkBookingLocks(db, court_ids, campus, phoneNumber)
+  if (!initialLockCheck.success) return initialLockCheck
+
   // 服务端查询会员并重新计算订单金额，不信任前端传入 total_fee
   const vipInfo = await getVipInfo(phoneNumber)
   let total_fee = 0
@@ -254,16 +328,12 @@ exports.main = async (event, ) => {
   const pricing_rule_ids = [...new Set(lightingPricing.rules.map((rule) => rule.rule_id))]
   const outTradeNo = generateOrderNo({ ...event, total_fee })
 
-  // 普通定场支付超时时间固定为2分钟
-  const tradeType = "JSAPI" // 当前使用小程序支付
-  // 保持刷卡至少1分钟，小程序支付按业务固定2分钟
-  const minTimeoutMinutes = tradeType === "MICROPAY" ? 1 : 2
-  const paymentTimeoutMinutes = tradeType === "MICROPAY" ? 1 : 2
-  // 确保至少满足最小时间要求，向上取整到秒
-  const timeoutSeconds = Math.max(minTimeoutMinutes * 60, Math.ceil(paymentTimeoutMinutes * 60))
-  
-  const now = Date.now()
-  const paymentExpireTime = new Date(now + timeoutSeconds * 1000)
+  // 会员和价格查询可能耗时，微信下单前重新确认锁仍属于本次预订。
+  // 此检查不续锁；两次读取也不替代数据库事务。
+  const finalLockCheck = await checkBookingLocks(db, court_ids, campus, phoneNumber, initialLockCheck.locks)
+  if (!finalLockCheck.success) return finalLockCheck
+  const paymentTimeoutMinutes = PAYMENT_TIMEOUT_MINUTES
+  const paymentExpireTime = finalLockCheck.paymentExpireTime
   const timeExpire = formatTimeExpire(paymentExpireTime)
 
   const res = await cloud.cloudPay.unifiedOrder({
