@@ -72,6 +72,41 @@ const fakeApi = (overrides) => ({
   call: async () => ({}),
   ...overrides,
 });
+test("list refresh loads campuses and courses in one request and uses shared admin permission", async () => {
+  const calls = [];
+  const { page } = loadPage("groupCourse", fakeApi({
+    call: async (action, input) => {
+      calls.push({ action, input });
+      return { viewer: { isAdmin: true }, campuses: [{ name: "东区" }], items: [], nextCursor: null };
+    },
+  }));
+  page.onLoad();
+  await page.refresh();
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].action, "list");
+  assert.equal(calls[0].input.includeCampuses, true);
+  assert.equal(page.data.campuses[0].name, "东区");
+  assert.equal(page.data.canCreate, false);
+  assert.equal(page.data.loading, false);
+});
+test("refresh after logout preserves mine login prompt and updates campuses without showing public courses", async () => {
+  const { page } = loadPage("groupCourse", fakeApi({
+    hasAuth: () => false,
+    call: async (action, input) => {
+      assert.equal(action, "list");
+      assert.equal(input.scope, "public");
+      return { viewer: { authenticated: false }, campuses: [{ name: "东区" }], items: [{}], nextCursor: "more" };
+    },
+  }));
+  page.onLoad();
+  page.setData({ scope: "mine" });
+  await page.refresh();
+  assert.equal(page.data.scope, "mine");
+  assert.equal(page.data.needsAuth, true);
+  assert.equal(page.data.items.length, 0);
+  assert.equal(page.data.nextCursor, null);
+  assert.equal(page.data.campuses.length, 1);
+});
 test("detail disables sharing until loaded and after course cancellation", async () => {
   let status = "PUBLISHED";
   let shareVisible = true;
@@ -474,7 +509,7 @@ test("existing shared login loads mine without another authorization", async () 
   page.setData({ scope: "mine" });
   await page.refresh();
   assert.equal(page.data.needsAuth, false);
-  assert.deepEqual(calls, ["context", "list"]);
+  assert.deepEqual(calls, ["list"]);
 });
 
 test("missing profile uses personal center and preserves group detail destination", async () => {

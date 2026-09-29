@@ -27,6 +27,28 @@ function createRepository(db) {
   });
   return {
     ...wrap(db),
+    // Scheduler queries must filter and limit in the database, never scan then slice.
+    // Required deadlines exclude missing/null values; optional ones treat them as due.
+    async findDue(name, {
+      where = {}, before = {}, optionalBefore = {}, orderBy = [], limit = 50,
+    }) {
+      const cmd = db.command;
+      const conditions = [Object.fromEntries(Object.entries(where).map(([field, value]) =>
+        [field, Array.isArray(value) ? cmd.in(value) : value]))];
+      for (const [field, time] of Object.entries(before)) {
+        conditions.push({ [field]: cmd.exists(true) }, { [field]: cmd.neq(null) },
+          { [field]: cmd.lte(time) });
+      }
+      for (const [field, time] of Object.entries(optionalBefore)) {
+        conditions.push(cmd.or(
+          { [field]: cmd.exists(false) }, { [field]: cmd.eq(null) },
+          { [field]: cmd.lte(time) },
+        ));
+      }
+      let query = db.collection(name).where(cmd.and(...conditions));
+      for (const field of orderBy) query = query.orderBy(field, "asc");
+      return (await query.limit(limit).get()).data;
+    },
     async scan(name, where = {}) {
       const all = [];
       let last;

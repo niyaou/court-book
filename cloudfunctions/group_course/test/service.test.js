@@ -767,6 +767,43 @@ test("default courts publish without booking writes and enforce coach and campus
   assert.equal((await f.publish({ ...second, coachId: "coach3", courtId: "west-real", publishRequestId: "request_third_123456789" })).success, true);
 });
 
+test("four unchanged courses load without transactions or admin form data", async () => {
+  const f = await published();
+  const base = await f.repo.get(C.course, f.id);
+  for (let i = 1; i < 4; i++) await f.repo.set(C.course, `perf-${i}`, base);
+  let transactions = 0, gets = 0;
+  const scans = [];
+  const originalTransaction = f.repo.transaction.bind(f.repo);
+  const originalGet = f.repo.get.bind(f.repo);
+  const originalScan = f.repo.scan.bind(f.repo);
+  f.repo.transaction = (...args) => { transactions++; return originalTransaction(...args); };
+  f.repo.get = (...args) => { gets++; return originalGet(...args); };
+  f.repo.scan = (...args) => { scans.push(args); return originalScan(...args); };
+  const result = await f.request("admin", "list", { scope: "public", includeCampuses: true });
+  assert.equal(result.success, true);
+  assert.equal(result.data.items.length, 4);
+  assert.equal(result.data.campuses[0].name, "东区");
+  assert.equal(transactions, 0);
+  assert.equal(gets, 4);
+  assert.equal(scans.length, 7); // manager, campuses, courses and four enrollment queries
+  assert.equal(scans.some(([name]) => ["court", "group_course_template"].includes(name)), false);
+  assert.deepEqual(scans.filter(([name]) => name === "manager"), [["manager", { phoneNumber: "admin" }]]);
+});
+test("list still expires payment holds at the deadline and completes ended confirmed courses", async () => {
+  const f = await published();
+  const enrolled = await f.request("user", "enroll", { courseId: f.id });
+  f.now += 3 * MINUTE;
+  const listed = await f.request("user", "list", { scope: "mine" });
+  assert.equal(listed.success, true);
+  assert.equal(listed.data.items[0].myEnrollment.status, "EXPIRED");
+  assert.equal(listed.data.items[0].course.occupiedCount, 0);
+  assert.equal((await f.repo.get(C.enrollment, enrolled.data.enrollment.id)).status, "EXPIRED");
+  const course = await f.repo.get(C.course, f.id);
+  await f.repo.set(C.course, f.id, { ...course, status: "CONFIRMED" });
+  f.now = course.endAt.getTime();
+  const ended = await f.request("admin", "list", { scope: "public" });
+  assert.equal(ended.data.items[0].course.status, "COMPLETED");
+});
 test("list pages by 20 after role, campus and own-enrollment filtering, including settlement", async () => {
   for (const phone of [null, "user", "vip", "admin"]) {
     const f = await published();

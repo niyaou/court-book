@@ -66,17 +66,20 @@ function createService({
         isAdmin: false,
         isVip: false,
       };
-    const managers = await repo.scan("manager", { phoneNumber: phone });
-    let isVip = null;
-    // Only price reads and enrollment need membership; administration/refunds must not depend on it.
-    if (["list", "detail", "enroll"].includes(e.action)) {
+    const lookupVip = async () => {
+      // Only price reads and enrollment need membership; administration/refunds must not depend on it.
+      if (!["list", "detail", "enroll"].includes(e.action)) return null;
       try {
-        isVip = await vip(phone);
+        return await vip(phone);
       } catch (err) {
         logger.error("VIP lookup failed", err.code || err.message);
         fail("VIP_UNAVAILABLE", true);
       }
-    }
+    };
+    const [managers, isVip] = await Promise.all([
+      repo.scan("manager", { phoneNumber: phone }),
+      lookupVip(),
+    ]);
     return {
       authenticated: true,
       phoneNumber: phone,
@@ -196,15 +199,17 @@ function createService({
   const selectableCoach = (person) => !!person &&
     typeof person.name === "string" && !!person.name.trim() &&
     typeof person.phoneNumber === "string" && !!person.phoneNumber.trim();
-  async function contextAction(e, v) {
-    const campusRows = (await repo.scan("campus", { enabled: true }))
-      .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
-    const campuses = campusRows.map((x) => ({
+  const campusDTOs = (rows) => rows
+    .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+    .map((x) => ({
         id: x._id,
         name: x.name,
         bookingManaged: !!x.bookingManaged,
         sortOrder: x.sortOrder || 0,
       }));
+  async function contextAction(e, v) {
+    const campusRows = await repo.scan("campus", { enabled: true });
+    const campuses = campusDTOs(campusRows);
     const result = {
       viewer: publicViewer(v),
       campuses,
@@ -277,20 +282,33 @@ function createService({
         e.scope === "mine" ? "createdAt" : "startAt",
         e.scope === "mine",
       );
-      for (const row of p.items) {
-        const c = row._course || row;
-        await settleCourse(c._id);
-        await expireCourseHolds(c._id);
-        const s = await snapshot(c._id);
-        if (e.scope === "public" && !v.isAdmin && s.c.status === "CANCELLED")
-          continue;
-        const own = v.authenticated
-          ? s.es.find((x) => x.phoneNumber === v.phoneNumber)
-          : null;
-        items.push({
-          course: courseDTO(s.c, s.es, v),
-          myEnrollment: await enrollmentDTO(own, s.c),
-        });
+      // Independent courses can load together; bound DB concurrency and retain page order.
+      for (let offset = 0; offset < p.items.length; offset += 5) {
+        const loaded = await Promise.all(p.items.slice(offset, offset + 5).map(async (row) => {
+          const c = row._course || row;
+          let s = await snapshot(c._id);
+          // Avoid opening no-op transactions on every list read. When work is due,
+          // the existing transaction rechecks live state and enrollmentVersion.
+          if ((s.c.status === "PUBLISHED" && clock() >= deadlines(s.c).formationAt) ||
+              (s.c.status === "CONFIRMED" && clock() >= ms(s.c.endAt))) {
+            await settleCourse(c._id);
+            s = await snapshot(c._id);
+          }
+          if (s.es.some((en) => en.status === "PENDING_PAYMENT" &&
+              (s.c.status === "CANCELLED" || ms(en.attemptStartedAt) + 3 * MINUTE <= clock()))) {
+            await expireCourseHolds(c._id);
+            s = await snapshot(c._id);
+          }
+          if (e.scope === "public" && !v.isAdmin && s.c.status === "CANCELLED") return null;
+          const own = v.authenticated
+            ? s.es.find((x) => x.phoneNumber === v.phoneNumber)
+            : null;
+          return {
+            course: courseDTO(s.c, s.es, v),
+            myEnrollment: await enrollmentDTO(own, s.c),
+          };
+        }));
+        items.push(...loaded.filter(Boolean));
       }
       nextCursor = p.nextCursor;
       cursor = nextCursor;
@@ -1049,60 +1067,57 @@ function createService({
     // CloudBase sends "timer"; retain "Timer" for existing test invocations.
     if (context.OPENID || !["timer", "Timer"].includes(event?.Type))
       fail("FORBIDDEN");
-    const [published, confirmed, cancelled, pending, allRefunds] =
+    const now = clock();
+    const until = date(now);
+    const [published, confirmed, cancelBatch, paymentBatch, refunds, expiredHolds] =
       await Promise.all([
-        repo.scan(C.course, { status: "PUBLISHED" }),
-        repo.scan(C.course, { status: "CONFIRMED" }),
-        repo.scan(C.course, {
-          status: "CANCELLED",
-          cancellationCleanupCompleted: false,
+        repo.findDue(C.course, {
+          where: { status: "PUBLISHED" },
+          before: { startAt: date(now + 57 * MINUTE) },
+          optionalBefore: { maintenanceAt: until },
+          orderBy: ["maintenanceAt", "_id"],
         }),
-        repo.scan(C.payment, { status: "PENDING" }),
-        repo.scan(C.refund),
+        repo.findDue(C.course, {
+          where: { status: "CONFIRMED" },
+          before: { endAt: until },
+          optionalBefore: { maintenanceAt: until },
+          orderBy: ["maintenanceAt", "_id"],
+        }),
+        repo.findDue(C.course, {
+          where: { status: "CANCELLED", cancellationCleanupCompleted: false },
+          optionalBefore: { maintenanceAt: until },
+          orderBy: ["maintenanceAt", "_id"],
+        }),
+        repo.findDue(C.payment, {
+          where: { status: "PENDING" },
+          optionalBefore: { queryNextAt: until },
+          orderBy: ["queryNextAt", "_id"],
+        }),
+        repo.findDue(C.refund, {
+          where: { status: ["PENDING", "PROCESSING", "FAILED"] },
+          before: { nextRetryAt: until },
+          optionalBefore: { leaseUntil: until },
+          orderBy: ["nextRetryAt", "_id"],
+        }),
+        // Read active expired holds directly. Old unresolved payments must not
+        // repeatedly take the first 50 slots and starve newer expiring holds.
+        repo.findDue(C.enrollment, {
+          where: { status: "PENDING_PAYMENT" },
+          before: { attemptStartedAt: date(now - 3 * MINUTE) },
+          orderBy: ["attemptStartedAt", "_id"],
+        }),
       ]);
-    const due = (rows, field) =>
-      rows
-        .filter((r) => !r[field] || ms(r[field]) <= clock())
-        .sort(
-          (a, b) =>
-            (ms(a[field]) || 0) - (ms(b[field]) || 0) ||
-            a._id.localeCompare(b._id),
-        )
-        .slice(0, 50);
-    const courses = due(
-      [
-        ...published.filter((c) => clock() >= deadlines(c).formationAt),
-        ...confirmed.filter((c) => clock() >= ms(c.endAt)),
-      ],
-      "maintenanceAt",
-    );
+    const courses = [...published, ...confirmed]
+      .sort((a, b) => (ms(a.maintenanceAt) || 0) - (ms(b.maintenanceAt) || 0) ||
+        a._id.localeCompare(b._id))
+      .slice(0, 50);
     // Formation counts current paid enrollments before channel queries. Read actions independently
     // settle their requested course, so delayed batches cannot reopen enrollment.
     await batch(courses, async (c) => {
       if (await reserve(C.course, c._id, "maintenanceAt"))
         await settleCourse(c._id);
     });
-    const paymentBatch = due(pending, "queryNextAt");
-    const cancelBatch = due(cancelled, "maintenanceAt");
-    const refunds = allRefunds
-      .filter(
-        (r) =>
-          r.nextRetryAt != null &&
-          ms(r.nextRetryAt) <= clock() &&
-          ms(r.leaseUntil) <= clock(),
-      )
-      .sort(
-        (a, b) =>
-          ms(a.nextRetryAt) - ms(b.nextRetryAt) || a._id.localeCompare(b._id),
-      )
-      .slice(0, 50);
-    const expiredCourseIds = [
-      ...new Set(
-        pending
-          .filter((p) => ms(p.createdAt) + 3 * MINUTE <= clock())
-          .map((p) => p.courseId),
-      ),
-    ].slice(0, 50);
+    const expiredCourseIds = [...new Set(expiredHolds.map((en) => en.courseId))];
     // Independent lanes ensure slow payment queries cannot prevent refund workers
     // from running. Each lane is capped at 50, with at most 10 network calls in flight.
     await Promise.all([
@@ -1159,7 +1174,12 @@ function createService({
         cancelEnrollment,
         cancelCourse,
       };
-      const data = await actions[e.action](e, v, context);
+      const [data, campusRows] = await Promise.all([
+        actions[e.action](e, v, context),
+        e.action === "list" && e.includeCampuses === true
+          ? repo.scan("campus", { enabled: true }) : null,
+      ]);
+      if (campusRows) data.campuses = campusDTOs(campusRows);
       return { success: true, data, serverTime: clock() };
     } catch (err) {
       logger.error("group course request failed", err.code || err.message);

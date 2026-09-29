@@ -84,7 +84,9 @@
       "collection": "group_course",
       "fields": [
         "status",
-        "startAt"
+        "startAt",
+        "maintenanceAt",
+        "_id"
       ]
     },
     {
@@ -117,7 +119,8 @@
       "fields": [
         "status",
         "cancellationCleanupCompleted",
-        "maintenanceAt"
+        "maintenanceAt",
+        "_id"
       ]
     },
     {
@@ -146,7 +149,8 @@
       "collection": "group_course_enrollment",
       "fields": [
         "status",
-        "attemptStartedAt"
+        "attemptStartedAt",
+        "_id"
       ]
     },
     {
@@ -174,7 +178,8 @@
       "collection": "group_course_payment",
       "fields": [
         "status",
-        "queryNextAt"
+        "queryNextAt",
+        "_id"
       ]
     },
     {
@@ -202,13 +207,24 @@
       "collection": "group_course_refund",
       "fields": [
         "status",
-        "nextRetryAt"
+        "nextRetryAt",
+        "_id",
+        "leaseUntil"
       ]
     },
     {
       "collection": "manager",
       "fields": [
         "phoneNumber"
+      ]
+    },
+    {
+      "collection": "group_course",
+      "fields": [
+        "status",
+        "endAt",
+        "maintenanceAt",
+        "_id"
       ]
     }
   ],
