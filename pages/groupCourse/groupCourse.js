@@ -27,7 +27,6 @@ Page({
   },
   onUnload() {
     if (this._permissionBus) this._permissionBus.off("managerPermissionsUpdated", this._permissionUpdated);
-    ++this._refreshId;
     ++this._seq;
   },
   syncCreatePermission() {
@@ -40,54 +39,31 @@ Page({
     if (this.data.nextCursor && !this.data.loading) this.loadList(true);
   },
   async refresh() {
-    const refreshId = this._refreshId = (this._refreshId || 0) + 1;
-    ++this._seq;
     this.setData({ needsAuth: !api.hasAuth(), error: "", loading: true, items: [], nextCursor: null });
-    try {
-      const context = await api.call("context");
-      if (refreshId !== this._refreshId) return;
-      this.setData({
-        viewer: context.viewer,
-        canCreate: api.canCreateCourse(),
-        campuses: context.campuses,
-        needsAuth: !api.hasAuth(),
-      });
-      await this.loadList(false);
-    } catch (e) {
-      if (refreshId === this._refreshId) {
-        this.showError(e);
-        this.setData({ loading: false });
-      }
-    }
+    await this.loadList(false);
   },
   async loadList(append) {
     if (append && (this.data.loading || !this.data.nextCursor)) return;
     const seq = ++this._seq;
-    if (this.data.scope === "mine" && !api.hasAuth()) {
-      this.setData({
-        needsAuth: true,
-        items: [],
-        nextCursor: null,
-        loading: false,
-      });
-      return;
-    }
+    const guestMine = this.data.scope === "mine" && !api.hasAuth();
     this.setData({ loading: true, error: "", needsAuth: !api.hasAuth() });
     try {
       const data = await api.call("list", {
-        scope: this.data.scope,
+        scope: guestMine ? "public" : this.data.scope,
+        includeCampuses: !append,
         campus: this.data.campus || undefined,
         cursor: append ? this.data.nextCursor : undefined,
         pageSize: PAGE_SIZE,
       });
       if (seq !== this._seq) return;
-      const items = data.items.map(view.item);
+      const items = guestMine ? [] : data.items.map(view.item);
       this.setData({
         items: append ? this.data.items.concat(items) : items,
         viewer: data.viewer,
         canCreate: api.canCreateCourse(),
         needsAuth: !api.hasAuth(),
-        nextCursor: data.nextCursor,
+        nextCursor: guestMine ? null : data.nextCursor,
+        ...(data.campuses ? { campuses: data.campuses } : {}),
       });
     } catch (e) {
       if (seq === this._seq) this.showError(e);

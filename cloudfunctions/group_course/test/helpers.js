@@ -32,6 +32,23 @@ class MemoryRepository {
       .map(([, v]) => clone(v))
       .sort((a, b) => a._id.localeCompare(b._id));
   }
+  async findDue(n, { where = {}, before = {}, optionalBefore = {}, orderBy = [], limit = 50 }) {
+    return [...this.rows.entries()]
+      .filter(([key, row]) => key.startsWith(n + "/") &&
+        Object.entries(where).every(([field, value]) =>
+          Array.isArray(value) ? value.includes(row[field]) : row[field] === value) &&
+        Object.entries(before).every(([field, time]) => row[field] != null && row[field] <= time) &&
+        Object.entries(optionalBefore).every(([field, time]) => row[field] == null || row[field] <= time))
+      .map(([, row]) => clone(row))
+      .sort((a, b) => {
+        for (const field of orderBy) {
+          const av = a[field] ?? 0, bv = b[field] ?? 0;
+          if (av < bv) return -1;
+          if (av > bv) return 1;
+        }
+        return 0;
+      }).slice(0, limit);
+  }
   async transaction(fn) {
     const reads = new Map(),
       writes = new Map();
