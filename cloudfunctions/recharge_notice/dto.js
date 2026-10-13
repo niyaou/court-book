@@ -4,7 +4,7 @@ function mapNotice(row) {
     coachId: Number(row.coachId),
     coachName: row.coachName || '',
     coachActive: Boolean(Number(row.coachActive)),
-    memberId: Number(row.memberId),
+    memberId: row.memberId == null ? null : Number(row.memberId),
     memberName: row.memberName || '',
     memberNumber: row.memberNumber || '',
     memberActive: Boolean(Number(row.memberActive)),

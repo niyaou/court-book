@@ -59,7 +59,7 @@ async function list(connection, coachId, status, requestedPage) {
 }
 
 async function create(connection, coachId, notice) {
-  if (!(await ensureMember(connection, notice.memberId))) return failure('VALIDATION_FAILED', '会员不存在或已失效')
+  if (notice.memberId !== null && !(await ensureMember(connection, notice.memberId))) return failure('VALIDATION_FAILED', '会员不存在或已失效')
   try {
     const [result] = await connection.execute(
       'INSERT INTO coach_recharge_notice (coach_id, member_id, recharge_date, note, status, version) VALUES (?, ?, CURRENT_DATE(), ?, \'PENDING\', 1)',
@@ -77,7 +77,7 @@ async function create(connection, coachId, notice) {
 }
 
 async function update(connection, coachId, id, notice) {
-  if (!(await ensureMember(connection, notice.memberId))) {
+  if (notice.memberId !== null && !(await ensureMember(connection, notice.memberId))) {
     const [existing] = await connection.execute('SELECT member_id FROM coach_recharge_notice WHERE id = ? AND coach_id = ?', [id, coachId])
     if (!existing.length) return failure('RECHARGE_NOTICE_NOT_FOUND', '充值待办已不存在')
     if (Number(existing[0].member_id) !== notice.memberId) return failure('VALIDATION_FAILED', '会员不存在或已失效')
