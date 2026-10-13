@@ -6,14 +6,14 @@
   </view>
 
   <view class="form-card">
-    <view class="section-title">充值会员</view>
+    <view class="section-title">充值会员（选填）</view>
     <view class="selected-member" wx:if="{{member}}">
       <view><text class="member-name">{{member.name}}</text><text class="member-number" wx:if="{{member.number}}">{{member.number}}</text></view>
-      <text class="replace" bindtap="clearMember">更换</text>
+      <text class="replace" bindtap="clearMember">清空 / 更换</text>
     </view>
     <view class="inactive-tip" wx:if="{{member && !member.active}}">该会员已失效；可以保留原会员修改备注，也可以更换会员。</view>
     <view class="search-box" wx:if="{{!member}}">
-      <input placeholder="输入会员姓名搜索" value="{{memberKeyword}}" bindinput="onMemberKeyword"/>
+      <input placeholder="可不选会员，或输入姓名搜索" value="{{memberKeyword}}" bindinput="onMemberKeyword"/>
       <view class="search-loading" wx:if="{{memberSearchLoading}}">搜索中...</view>
       <view class="search-result" wx:for="{{memberResults}}" wx:key="id" data-id="{{item.id}}" bindtap="chooseMember"><text>{{item.name}}</text><text class="member-number">{{item.number || ''}}</text></view>
     </view>

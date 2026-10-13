@@ -34,7 +34,7 @@ Page({
     this.setData({
       version: Number(notice.version),
       rechargeDate: notice.rechargeDate || '',
-      member: {
+      member: notice.memberId == null ? null : {
         id: Number(notice.memberId),
         name: notice.memberName || '已失效会员',
         number: notice.memberNumber || '',
@@ -81,7 +81,7 @@ Page({
   },
 
   validate() {
-    if (!this.data.member || !Number.isInteger(Number(this.data.member.id))) return '请选择会员'
+    if (this.data.member && (!Number.isInteger(Number(this.data.member.id)) || Number(this.data.member.id) <= 0)) return '会员无效'
     const note = String(this.data.note || '').trim()
     if (!note) return '请填写充值备注'
     if (note.length > 500) return '充值备注不能超过 500 个字符'
@@ -94,7 +94,7 @@ Page({
     if (error) return toast(error)
     if (this.data.submitting) return
     this.setData({ submitting: true })
-    const notice = { memberId: Number(this.data.member.id), note: String(this.data.note).trim() }
+    const notice = { memberId: this.data.member ? Number(this.data.member.id) : null, note: String(this.data.note).trim() }
     if (this.data.mode === 'edit') notice.version = Number(this.data.version)
     try {
       const result = await new Promise((resolve, reject) => wx.cloud.callFunction({

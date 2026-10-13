@@ -33,7 +33,7 @@
         </block>
         <block wx:else>
           <view class="card-title"><text>用户充值</text><text class="recharge-status">待知悉</text></view>
-          <view class="course-row"><text>会员</text><text class="wrap-value">{{item.memberName || '已失效会员'}}{{item.memberNumber ? '（' + item.memberNumber + '）' : ''}}</text></view>
+          <view class="course-row"><text>会员</text><text class="wrap-value">{{item.memberId ? (item.memberName || '已失效会员') : '未指定会员'}}{{item.memberNumber ? '（' + item.memberNumber + '）' : ''}}</text></view>
           <view class="course-row"><text>充值日期</text><text>{{item.rechargeDate}}</text></view>
           <view class="course-row"><text>上报时间</text><text>{{item.updatedAt}}</text></view>
           <view class="course-row"><text>备注</text><text class="wrap-value">{{item.note}}</text></view>
@@ -80,7 +80,7 @@
     <block wx:else>
       <view class="course-card recharge-card" wx:for="{{acknowledgedList}}" wx:key="compoundKey">
         <view class="card-title"><text>用户充值</text><text class="acknowledged-status">已知悉</text></view>
-        <view class="course-row"><text>会员</text><text class="wrap-value">{{item.memberName || '已失效会员'}}{{item.memberNumber ? '（' + item.memberNumber + '）' : ''}}</text></view>
+        <view class="course-row"><text>会员</text><text class="wrap-value">{{item.memberId ? (item.memberName || '已失效会员') : '未指定会员'}}{{item.memberNumber ? '（' + item.memberNumber + '）' : ''}}</text></view>
         <view class="course-row"><text>充值日期</text><text>{{item.rechargeDate}}</text></view>
         <view class="course-row"><text>知悉时间</text><text>{{item.acknowledgedAt}}</text></view>
         <view class="course-row"><text>备注</text><text class="wrap-value">{{item.note}}</text></view>
