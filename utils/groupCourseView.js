@@ -1,3 +1,4 @@
+const content = require("./groupCourseContent");
 const statuses = {
   PUBLISHED: "报名中",
   CONFIRMED: "已成班",
@@ -57,6 +58,7 @@ function courtLabel(value) {
 function course(value) {
   const d = dateParts(value.startAt);
   return Object.assign({}, value, {
+    descriptionNodes: content.nodes(value),
     courtLabel: courtLabel(value.courtNumber),
     statusLabel:
       value.status === "PUBLISHED" && value.paidCount >= value.minParticipants

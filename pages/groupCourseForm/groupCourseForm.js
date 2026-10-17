@@ -1,5 +1,6 @@
 const api = require("../../utils/groupCourseApi");
 const view = require("../../utils/groupCourseView");
+const content = require("../../utils/groupCourseContent");
 const PENDING_KEY = "groupCourseUnresolvedPublish";
 const timeHours = Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, "0"));
 const timeMinutes = ["00", "30"];
@@ -8,6 +9,7 @@ const initialForm = {
   templateId: "",
   title: "",
   description: "",
+  editorDelta: null,
   coachId: "",
   campus: "",
   courtId: "",
@@ -38,8 +40,11 @@ function requestId() {
   return `gc_${Date.now()}_${Math.random().toString(36).slice(2)}_${Math.random().toString(36).slice(2)}`;
 }
 function validate(form, now) {
-  if (!form.templateId || !form.title.trim() || !form.description.trim())
+  const description = form.editorDelta == null
+    ? form.description.trim() : content.encode(form.editorDelta);
+  if (!form.templateId || !form.title.trim() || !description)
     throw new Error("请选择教学模板，并填写标题与教学详情");
+  if (description.length > content.MAX_TEXT) throw new Error("教学详情过长，请精简文字或排版后重试");
   if (!form.coachId || !form.campus || !form.courtId)
     throw new Error("请选择教练、校区和场地");
   const startAt = view.parseBeijing(form.date, form.startTime);
@@ -70,7 +75,7 @@ function validate(form, now) {
   return {
     templateId: form.templateId,
     title: form.title.trim(),
-    description: form.description.trim(),
+    description,
     coachId: form.coachId,
     campus: form.campus,
     courtId: form.courtId,
@@ -106,6 +111,11 @@ Page({
     coachLabel: "选择授课教练",
     courtLabel: "选择场地",
     error: "",
+    editorReady: false,
+    editorLoading: false,
+    readingEditor: false,
+    editorError: "",
+    formats: {},
   },
   onLoad() {
     this._unwatchPermissions = api.watchPermissions(() => { this.syncPermission(); this.loadContext(); });
@@ -186,7 +196,9 @@ Page({
       !this.data.publishedCourseId &&
       !this.data.submitting &&
       !this.data.unresolved &&
-      !this.data.showConfirm
+      !this.data.showConfirm &&
+      !this.data.editorLoading &&
+      !this.data.readingEditor
     );
   },
   input(e) {
@@ -195,6 +207,43 @@ Page({
     if (!Object.prototype.hasOwnProperty.call(initialForm, field)) return;
     const form = Object.assign({}, this.data.form, { [field]: e.detail.value });
     this.setData({ form });
+  },
+  onEditorReady() {
+    this.createSelectorQuery().select("#course-description-editor").context((res) => {
+      if (!res || !res.context) {
+        this.setData({ editorError: "编辑器加载失败，请重新进入页面" });
+        return;
+      }
+      this._editor = res.context;
+      this.setData({ editorReady: true });
+      this.loadEditorContent();
+    }).exec();
+  },
+  loadEditorContent() {
+    if (!this._editor) return;
+    this.setData({ editorLoading: true, editorError: "", formats: {} });
+    this._editor.setContents({
+      ...content.editorContents(this.data.form),
+      success: () => this.setData({ editorLoading: false }),
+      fail: () => this.setData({ editorLoading: false, editorError: "教学详情加载失败，请重新选择模板" }),
+    });
+  },
+  onDescriptionInput(e) {
+    if (!this.editable()) return;
+    this.setData({
+      form: Object.assign({}, this.data.form, {
+        description: e.detail.text || "",
+        editorDelta: e.detail.delta,
+      }),
+    });
+  },
+  onEditorStatusChange(e) {
+    this.setData({ formats: e.detail });
+  },
+  formatDescription(e) {
+    if (!this.editable() || !this._editor || this.data.editorError) return;
+    const { name, value } = e.currentTarget.dataset;
+    this._editor.format(name, value);
   },
   chooseTemplate(e) {
     if (!this.editable()) return;
@@ -206,9 +255,11 @@ Page({
         templateId: template.id,
         title: template.title,
         description: template.description,
+        editorDelta: null,
       }),
     });
     this.updateLabels();
+    this.loadEditorContent();
   },
   chooseTime(e) {
     if (!this.editable()) return;
@@ -259,6 +310,28 @@ Page({
   },
   preparePublish() {
     if (!this.editable() || !this.data.canManage) return;
+    if (this.data.editorError) {
+      this.setData({ error: this.data.editorError });
+      return;
+    }
+    // Read a fresh snapshot: formatting the current selection may not emit an input event.
+    if (this._editor) {
+      this.setData({ readingEditor: true });
+      this._editor.getContents({
+        success: (result) => {
+          this.setData({ readingEditor: false, form: Object.assign({}, this.data.form, {
+            description: result.text || "", editorDelta: result.delta,
+          }) });
+          this.preparePublishSnapshot();
+        },
+        fail: () => this.setData({ readingEditor: false, error: "读取教学详情失败，请重试" }),
+      });
+      return;
+    }
+    this.preparePublishSnapshot();
+  },
+  preparePublishSnapshot() {
+    if (!this.editable() || !this.data.canManage) return;
     try {
       const payload = validate(this.data.form, api.now());
       const campus = this.data.campuses.find(
@@ -267,6 +340,7 @@ Page({
       const summary = {
         title: payload.title,
         description: payload.description,
+        descriptionNodes: content.nodes(payload),
         coach: this.data.coachLabel,
         campus: payload.campus,
         court: this.data.courtLabel,

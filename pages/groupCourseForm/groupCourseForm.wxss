@@ -40,10 +40,14 @@
   padding: 0 18rpx;
   line-height: normal;
 }
-.textarea {
-  height: 210rpx;
-  display: block;
-}
+.description-editor-shell { border: 1rpx solid #e1ebf3; border-radius: 13rpx; overflow: hidden; }
+.format-toolbar { display: flex; flex-wrap: wrap; gap: 8rpx; padding: 12rpx; background: #f6f9fc; border-bottom: 1rpx solid #e1ebf3; }
+.format-tool { padding: 12rpx 16rpx; color: #34576f; font-size: 24rpx; border-radius: 8rpx; }
+.format-tool.selected { background: #e1f2fc; color: #087bb8; }
+.format-bold { font-weight: bold; }
+.format-italic { font-style: italic; }
+.format-underline { text-decoration: underline; }
+.description-editor { box-sizing: border-box; height: 440rpx; padding: 20rpx; color: #34576f; font-size: 27rpx; line-height: 1.8; }
 .field-grid {
   display: flex;
   gap: 20rpx;
@@ -84,7 +88,6 @@
   max-height: 65vh;
 }
 .summary-description {
-  font-size: 24rpx;
   margin-top: 16rpx;
 }
 .dialog-actions {

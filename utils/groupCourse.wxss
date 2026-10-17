@@ -221,6 +221,7 @@ page {
   line-height: 1.9;
   font-size: 25rpx;
 }
+.course-content { display: block; font-size: 27rpx; line-height: 1.8; color: #34576f; overflow-wrap: break-word; }
 .text-body {
   white-space: pre-wrap;
   line-height: 1.9;

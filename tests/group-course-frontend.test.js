@@ -27,6 +27,7 @@ function loadPage(name, api, wxOverrides = {}) {
     },
     require: (spec) => {
       if (spec.includes("groupCourseApi")) return api;
+      if (spec.includes("groupCourseContent")) return require("../utils/groupCourseContent");
       if (spec.includes("groupCourseLocations")) return require("../utils/groupCourseLocations");
       return view;
     },
@@ -262,13 +263,14 @@ test("server default courts show numbered labels and campus change clears select
   assert.equal(page.data.form.courtId, "");
   assert.equal(page.data.filteredCourts.length, 0);
 });
-test("template selection only overwrites title and description", () => {
+test("template selection only overwrites teaching content and clears previous rich formatting", () => {
   const { page } = readyForm(fakeApi());
   page.setData({
     templates: [{ id: "new", title: "发球", description: "抛球练习" }],
   });
   page.chooseTemplate({ detail: { value: "0" } });
   assert.equal(page.data.form.title, "发球");
+  assert.equal(page.data.form.editorDelta, null);
   for (const key of [
     "date",
     "startTime",
@@ -282,6 +284,49 @@ test("template selection only overwrites title and description", () => {
     "courtId",
   ])
     assert.equal(page.data.form[key], form[key]);
+});
+test("publish reads current editor formatting, then freezes it through preview and network retry", async () => {
+  const calls = [];
+  const { page } = readyForm(fakeApi({ call: async (action, payload) => {
+    calls.push(JSON.parse(JSON.stringify(payload)));
+    if (calls.length === 1) throw Object.assign(new Error("网络失败"), { code: "NETWORK_ERROR" });
+    return { courseId: "published-rich" };
+  } }));
+  let read;
+  page._editor = { getContents: (options) => { read = options; } };
+  page.preparePublish();
+  assert.equal(page.data.readingEditor, true);
+  assert.equal(page.editable(), false);
+  assert.equal(page.data.showConfirm, false);
+  const delta = { ops: [{ insert: "最新内容", attributes: { bold: true } }, { insert: "\n", attributes: { header: 2 } }] };
+  read.success({ text: "最新内容\n", delta });
+  assert.equal(page.data.showConfirm, true);
+  assert.match(page._confirmed.payload.description, /最新内容/);
+  assert.match(page.data.summary.descriptionNodes, /<h2[^>]*>/);
+  page.onDescriptionInput({ detail: { text: "不应变更", delta: { ops: [] } } });
+  await page.confirmPublish();
+  await page.submitPending();
+  assert.deepEqual(calls[0], calls[1]);
+  assert.equal(Object.hasOwn(calls[0], "descriptionDelta"), false);
+  assert.equal(Object.hasOwn(calls[0], "editorDelta"), false);
+  assert.match(calls[0].description, /font-weight:bold/);
+});
+test("editor loads selected template once and failed reads never open confirmation", () => {
+  const { page } = readyForm(fakeApi());
+  let loaded;
+  page._editor = {
+    setContents: (options) => { loaded = options; },
+    getContents: (options) => options.fail(),
+  };
+  page.setData({ templates: [{ id: "new", title: "发球", description: "抛球\n\n挥拍" }] });
+  page.chooseTemplate({ detail: { value: "0" } });
+  assert.equal(loaded.delta.ops[0].insert, "抛球\n\n挥拍\n");
+  assert.equal(page.editable(), false);
+  loaded.success();
+  page.preparePublish();
+  assert.equal(page.data.showConfirm, false);
+  assert.equal(page.data.readingEditor, false);
+  assert.match(page.data.error, /读取教学详情失败/);
 });
 test("confirmation does not call publish; timeout retry preserves frozen payload and request ID", async () => {
   const calls = [];
