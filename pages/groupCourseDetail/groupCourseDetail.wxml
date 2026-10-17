@@ -25,7 +25,7 @@
           <text>分享课程</text>
         </button>
       </view>
-      <view class="text-body">{{course.description}}</view>
+      <rich-text class="course-content" nodes="{{course.descriptionNodes}}" />
     </view>
     <view class="card"><view class="section-title">授课教练</view><view class="coach"><view class="coach-initial">教</view><view><view class="title">{{course.coachName}}</view><view class="small muted">{{course.coachIntroduction || '课程教学由本节授课教练负责'}}</view></view></view></view>
     <view class="card"><view class="section-title">开课进度</view><view class="row small muted"><text>已支付 {{course.paidCount}} 人</text><text>最低 {{course.minParticipants}} 人 / 上限 {{course.maxParticipants}} 人</text></view><view class="progress-track"><view class="progress-fill" style="width:{{course.progress}}%"></view></view><view class="small muted">剩余 {{course.remainingSeats}} 席，待付款与退款中报名也会占用名额。</view></view>
