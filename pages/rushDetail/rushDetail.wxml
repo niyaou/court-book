@@ -29,9 +29,10 @@
       </view>
       <view class="rule-block">
         <text class="rule-block-title">【用球及场地公约】</text>
-        <text class="rule-block-line">场地不提供训练用球，如需购买 50元/筒。</text>
-        <text class="rule-block-line">全场禁止吸烟，禁止携带宠物。</text>
-        <text class="rule-block-line">运动自愿参加，请注意自身安全，乐动网球不承担意外及伤病连带责任。</text>
+        <text class="rule-block-line">• 畅打预订不得用于教学及多球训练，违者须按正常价格补交场地费和灯光费。</text>
+        <text class="rule-block-line">• 场地不提供训练用球，如需购买 50元/筒。</text>
+        <text class="rule-block-line">• 全场禁止吸烟，禁止携带宠物。</text>
+        <text class="rule-block-line">• 运动自愿参加，请注意自身安全，乐动网球不承担意外及伤病连带责任。</text>
       </view>
       <view class="rule-origin" wx:if="{{detail.rushRule.content}}">
         <text class="rule-block-title">【其他规则】</text>
