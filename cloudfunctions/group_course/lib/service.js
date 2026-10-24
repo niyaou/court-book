@@ -279,8 +279,8 @@ function createService({
         rows,
         cursor,
         pageSize - items.length,
-        e.scope === "mine" ? "createdAt" : "startAt",
-        e.scope === "mine",
+        e.scope === "mine" ? "createdAt" : "endAt",
+        true,
       );
       // Independent courses can load together; bound DB concurrency and retain page order.
       for (let offset = 0; offset < p.items.length; offset += 5) {
