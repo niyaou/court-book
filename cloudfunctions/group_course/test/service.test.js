@@ -847,6 +847,46 @@ test("list pages by 20 after role, campus and own-enrollment filtering, includin
   }
 });
 
+test("only admins see completed courses in either list, including completion during pagination", async () => {
+  for (const phone of [null, "user", "vip", "admin"]) {
+    for (const scope of phone ? ["public", "mine"] : ["public"]) {
+      const f = await published();
+      const base = await f.repo.get(C.course, f.id);
+      for (let i = 0; i < 5; i++) {
+        const id = `visibility-${i}`;
+        await f.repo.set(C.course, id, {
+          ...base, campus: "可见性校区",
+          status: i === 0 ? "COMPLETED" : i === 1 ? "CONFIRMED" : "PUBLISHED",
+          startAt: new Date(f.now + (i < 2 ? -120 : 600) * MINUTE),
+          endAt: new Date(f.now + (i < 2 ? 0 : 700) * MINUTE),
+        });
+        if (phone) await f.repo.set(C.enrollment, `${phone}-${id}`, {
+          courseId: id, phoneNumber: phone, status: "EXPIRED",
+          createdAt: new Date(f.now - i), attemptStartedAt: new Date(f.now),
+          originalPriceYuan: 101, actualFeeYuan: 101,
+        });
+      }
+      let cursor;
+      const ids = [], sizes = [];
+      do {
+        const r = await f.request(phone, "list", {
+          scope, campus: "可见性校区", pageSize: 2, cursor,
+        });
+        assert.equal(r.success, true);
+        sizes.push(r.data.items.length);
+        for (const item of r.data.items) {
+          ids.push(item.course.id);
+          if (phone !== "admin") assert.notEqual(item.course.status, "COMPLETED");
+        }
+        cursor = r.data.nextCursor;
+      } while (cursor);
+      assert.deepEqual(sizes, phone === "admin" ? [2, 2, 1] : [2, 1]);
+      assert.deepEqual(ids.sort(), (phone === "admin" ? [0, 1, 2, 3, 4] : [2, 3, 4]).map((i) => `visibility-${i}`));
+      assert.equal((await f.repo.get(C.course, "visibility-1")).status, "COMPLETED");
+    }
+  }
+});
+
 test("paid attendee gallery exposes only names and avatars, with 20-item pages for every role", async () => {
   const f = await published();
   for (let i = 0; i < 25; i++) {

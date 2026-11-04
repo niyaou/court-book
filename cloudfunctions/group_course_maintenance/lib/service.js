@@ -249,6 +249,8 @@ function createService({
   async function list(e, v) {
     if (!["public", "mine"].includes(e.scope)) fail("INVALID_ARGUMENT");
     if (e.scope === "mine") requireUser(v);
+    const visible = (c) => v.isAdmin ||
+      (c.status !== "COMPLETED" && (e.scope !== "public" || c.status !== "CANCELLED"));
     let rows;
     if (e.scope === "mine") {
       rows = await repo.scan(C.enrollment, { phoneNumber: v.phoneNumber });
@@ -259,12 +261,12 @@ function createService({
         })),
       );
       rows = pairs
-        .filter((x) => x.course && (!e.campus || x.course.campus === e.campus))
+        .filter((x) => x.course && visible(x.course) && (!e.campus || x.course.campus === e.campus))
         .map((x) => ({ ...x.enrollment, _course: x.course }));
     } else
       rows = (await repo.scan(C.course)).filter(
         (c) =>
-          (v.isAdmin || c.status !== "CANCELLED") &&
+          visible(c) &&
           (!e.campus || c.campus === e.campus),
       );
     const pageSize = e.pageSize === undefined ? 20 : e.pageSize;
@@ -273,7 +275,7 @@ function createService({
     const items = [];
     let cursor = e.cursor;
     let nextCursor;
-    // Settlement can hide newly cancelled courses. Keep scanning within the
+    // Settlement can hide newly cancelled or completed courses. Keep scanning within the
     // same filtered result until this page is full or no candidates remain.
     do {
       const p = page(
@@ -300,7 +302,7 @@ function createService({
             await expireCourseHolds(c._id);
             s = await snapshot(c._id);
           }
-          if (e.scope === "public" && !v.isAdmin && s.c.status === "CANCELLED") return null;
+          if (!visible(s.c)) return null;
           const own = v.authenticated
             ? s.es.find((x) => x.phoneNumber === v.phoneNumber)
             : null;

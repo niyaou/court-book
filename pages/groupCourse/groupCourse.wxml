@@ -9,7 +9,7 @@
   <scroll-view scroll-x class="filters"><view class="filter {{!campus ? 'active' : ''}}" data-campus="" bindtap="selectCampus">全部</view><view wx:for="{{campuses}}" wx:key="id" class="filter {{campus === item.name ? 'active' : ''}}" data-campus="{{item.name}}" bindtap="selectCampus">{{item.name}}</view></scroll-view>
   <view wx:if="{{error}}" class="error">{{error}}<view class="link" bindtap="retry">重新加载</view></view>
   <view wx:if="{{needsAuth}}" class="card auth-card"><view class="small">登录状态由个人中心统一管理。</view><button class="primary" bindtap="goToLogin" loading="{{authorizing}}" disabled="{{authorizing}}">前往个人中心</button></view>
-  <view wx:for="{{items}}" wx:key="id" class="card compact-course campus-{{item.campusTone}}" data-id="{{item.course.id}}" bindtap="openDetail" hover-class="compact-course-pressed" role="button" aria-label="查看{{item.course.title}}详情">
+  <view wx:for="{{items}}" wx:key="id" class="card compact-course campus-{{item.campusTone}} {{item.course.status === 'CANCELLED' || item.course.status === 'COMPLETED' ? 'compact-course-weak' : ''}}" data-id="{{item.course.id}}" bindtap="openDetail" hover-class="compact-course-pressed" role="button" aria-label="查看{{item.course.title}}详情">
     <view class="compact-heading">
       <text class="campus-tag">{{item.course.campus}}</text>
       <text class="compact-time">{{item.course.timeLabel}}</text>
