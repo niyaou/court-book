@@ -53,6 +53,7 @@
 .campus-purple { --campus-color: #7350a5; }
 .campus-rose { --campus-color: #a74469; }
 .compact-course-pressed { background: #f5f8fb; }
+.compact-course-weak { opacity: 0.55; }
 .compact-heading { display: flex; align-items: center; gap: 12rpx; }
 .campus-tag {
   flex-shrink: 0;

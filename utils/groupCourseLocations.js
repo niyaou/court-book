@@ -25,6 +25,18 @@ const locations = {
     latitude: 30.543125,
     longitude: 104.073025,
   },
+  "银泰城校区": {
+    name: "乐动网球（成都银泰城店）",
+    address: "四川省成都市吉泰六路与益州大道中段交叉口东北180米",
+    latitude: 30.540782,
+    longitude: 104.058044,
+  },
+  "桐梓林校区": {
+    name: "乐动网球（嘉悦集店）",
+    address: "四川省成都市武侯区航空路10号嘉悦集F5层",
+    latitude: 30.6159,
+    longitude: 104.075007,
+  },
 };
 
 function campusLocation(campus) {
